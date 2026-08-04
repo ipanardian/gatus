@@ -3,9 +3,8 @@ BINARY=gatus
 IMAGE ?= gatus-nobi:latest
 CONTAINER ?= gatus
 HOST_PORT ?= 8080
-DEPLOY_ROOT ?= $(abspath $(CURDIR)/..)
-CONFIG_FILE ?= $(DEPLOY_ROOT)/config.yaml
-DATA_DIR ?= $(DEPLOY_ROOT)/data
+CONFIG_FILE ?= ./config.yaml
+DATA_DIR ?= ./data
 PRODUCTION_ENVIRONMENT ?= production
 
 .PHONY: install
