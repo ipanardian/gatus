@@ -45,6 +45,7 @@ deploy: production-build
 	@docker rm -f "$(CONTAINER)" >/dev/null 2>&1 || true
 	docker run -d \
 		--restart=unless-stopped \
+		--network ip4net \
 		-e ENVIRONMENT="$(PRODUCTION_ENVIRONMENT)" \
 		-p "$(HOST_PORT):8080" \
 		-v "$(CONFIG_FILE):/config/config.yaml:ro" \
