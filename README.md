@@ -254,7 +254,7 @@ If you want to test it locally, see [Docker](#docker).
 | `storage`                    | [Storage configuration](#storage).                                                                                                       | `{}`          |
 | `alerting`                   | [Alerting configuration](#alerting).                                                                                                     | `{}`          |
 | `announcements`              | [Announcements configuration](#announcements).                                                                                           | `[]`          |
-| `endpoints`                  | [Endpoints configuration](#endpoints).                                                                                                   | Required `[]` |
+| `endpoints`                  | [Endpoints configuration](#endpoints).                                                                                                   | `[]`          |
 | `external-endpoints`         | [External Endpoints configuration](#external-endpoints).                                                                                 | `[]`          |
 | `security`                   | [Security configuration](#security).                                                                                                     | `{}`          |
 | `concurrency`                | Maximum number of endpoints/suites to monitor concurrently. Set to `0` for unlimited. See [Concurrency](#concurrency).                   | `3`           |
@@ -263,6 +263,8 @@ If you want to test it locally, see [Docker](#docker).
 | `web`                        | [Web configuration](#web).                                                                                                               | `{}`          |
 | `ui`                         | [UI configuration](#ui).                                                                                                                 | `{}`          |
 | `maintenance`                | [Maintenance configuration](#maintenance).                                                                                               | `{}`          |
+
+At least one regular endpoint, external endpoint, or suite must be configured.
 
 If you want more verbose logging, you may set the `GATUS_LOG_LEVEL` environment variable to `DEBUG`.
 Conversely, if you want less verbose logging, you can set the aforementioned environment variable to `WARN`, `ERROR` or `FATAL`.
@@ -275,7 +277,7 @@ You can then configure alerts to be triggered when an endpoint is unhealthy once
 
 | Parameter                                       | Description                                                                                                                                 | Default                    |
 |:------------------------------------------------|:--------------------------------------------------------------------------------------------------------------------------------------------|:---------------------------|
-| `endpoints`                                     | List of endpoints to monitor.                                                                                                               | Required `[]`              |
+| `endpoints`                                     | List of endpoints to monitor.                                                                                                               | `[]`                       |
 | `endpoints[].enabled`                           | Whether to monitor the endpoint.                                                                                                            | `true`                     |
 | `endpoints[].name`                              | Name of the endpoint. Can be anything.                                                                                                      | Required `""`              |
 | `endpoints[].group`                             | Group name. Used to group multiple endpoints together on the dashboard. <br />See [Endpoint groups](#endpoint-groups).                      | `""`                       |
@@ -549,6 +551,11 @@ Allows you to configure the application wide defaults for the dashboard's UI. So
 | `ui.default-sort-by`      | Default sorting option for endpoints in the dashboard. Can be `name`, `group`, or `health`. Note that user preferences override this.    | `name`                                              |
 | `ui.default-filter-by`    | Default filter option for endpoints in the dashboard. Can be `none`, `failing`, or `unstable`. Note that user preferences override this. | `none`                                              |
 | `ui.login-subtitle`       | Subtitle displayed on the OIDC login page.                                                                                               | `System Monitoring Dashboard`                       |
+| `ui.uptime-statistics`    | Whether to display uptime statistics on endpoint details pages.                                                                          | `true`                                              |
+| `ui.current-health`       | Whether to display the current health badge on endpoint details pages.                                                                   | `true`                                              |
+| `ui.response-time-trend`  | Whether to display the response time trend on endpoint details pages.                                                                    | `true`                                              |
+| `ui.events`               | Whether to display events on endpoint details pages.                                                                                     | `true`                                              |
+| `ui.response-time-badge-periods` | Response-time badge periods to display, in order. Supported values: `30d`, `7d`, `24h`, and `1h`. Use `[]` to hide all response-time badges. | `[30d, 7d, 24h, 1h]`                         |
 
 ### Announcements
 System-wide announcements allow you to display important messages at the top of the status page. These can be used to inform users about planned maintenance, ongoing issues, or general information. You can use markdown to format your announcements.

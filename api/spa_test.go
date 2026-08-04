@@ -18,6 +18,7 @@ import (
 func TestSinglePageApplication(t *testing.T) {
 	defer store.Get().Clear()
 	defer cache.Clear()
+	disabled := false
 	cfg := &config.Config{
 		Metrics: true,
 		Endpoints: []*endpoint.Endpoint{
@@ -31,7 +32,12 @@ func TestSinglePageApplication(t *testing.T) {
 			},
 		},
 		UI: &ui.Config{
-			Title: "example-title",
+			Title:                    "example-title",
+			UptimeStatistics:         &disabled,
+			CurrentHealth:            &disabled,
+			ResponseTimeTrend:        &disabled,
+			Events:                   &disabled,
+			ResponseTimeBadgePeriods: []string{"30d", "7d"},
 		},
 	}
 	watchdog.UpdateEndpointStatus(cfg.Endpoints[0], &endpoint.Result{Success: true, Duration: time.Millisecond, Timestamp: time.Now()})
@@ -95,6 +101,14 @@ func TestSinglePageApplication(t *testing.T) {
 			strBody := string(body)
 			if !strings.Contains(strBody, cfg.UI.Title) {
 				t.Errorf("%s %s should have contained the title", request.Method, request.URL)
+			}
+			for _, setting := range []string{`uptimeStatistics: "false"`, `currentHealth: "false"`, `responseTimeTrend: "false"`, `events: "false"`} {
+				if !strings.Contains(strBody, setting) {
+					t.Errorf("%s %s should have contained %s", request.Method, request.URL, setting)
+				}
+			}
+			if !strings.Contains(strBody, `responseTimeBadgePeriods: "30d,7d"`) {
+				t.Errorf("%s %s should have contained configured response time badge periods", request.Method, request.URL)
 			}
 			if scenario.ExpectedDarkTheme && !strings.Contains(strBody, "class=\"dark\"") {
 				t.Errorf("%s %s should have responded with dark mode headers", request.Method, request.URL)

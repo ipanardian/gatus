@@ -1853,6 +1853,21 @@ func TestParseAndValidateConfigBytesWithNoEndpoints(t *testing.T) {
 	}
 }
 
+func TestParseAndValidateConfigBytesWithOnlyExternalEndpoints(t *testing.T) {
+	config, err := parseAndValidateConfigBytes([]byte(`
+external-endpoints:
+  - name: worker
+    group: external
+    token: secret
+`))
+	if err != nil {
+		t.Fatalf("expected external-endpoint-only configuration to be valid, got %v", err)
+	}
+	if len(config.ExternalEndpoints) != 1 {
+		t.Fatalf("expected one external endpoint, got %d", len(config.ExternalEndpoints))
+	}
+}
+
 func TestGetAlertingProviderByAlertType(t *testing.T) {
 	alertingConfig := &alerting.Config{
 		AWSSimpleEmailService: &awsses.AlertProvider{},

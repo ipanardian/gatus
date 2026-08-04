@@ -304,7 +304,7 @@ func TestStore_GetEndpointStatusPage1IsHasMoreRecentResultsThanPage2(t *testing.
 		t.Run(scenario.Name, func(t *testing.T) {
 			scenario.Store.InsertEndpointResult(&testEndpoint, &firstResult)
 			scenario.Store.InsertEndpointResult(&testEndpoint, &secondResult)
-			endpointStatusPage1, err := scenario.Store.GetEndpointStatusByKey(testEndpoint.Key(), paging.NewEndpointStatusParams().WithResults(1, 1))
+			endpointStatusPage1, err := scenario.Store.GetEndpointStatusByKey(testEndpoint.Key(), paging.NewEndpointStatusParams().WithResults(1, 1).WithResultsCount())
 			if err != nil {
 				t.Error("shouldn't have returned an error, got", err.Error())
 			}
@@ -313,6 +313,9 @@ func TestStore_GetEndpointStatusPage1IsHasMoreRecentResultsThanPage2(t *testing.
 			}
 			if len(endpointStatusPage1.Results) != 1 {
 				t.Fatalf("endpointStatusPage1 should've had 1 result")
+			}
+			if endpointStatusPage1.ResultsCount != 2 {
+				t.Fatalf("endpointStatusPage1 should've reported 2 total results, got %d", endpointStatusPage1.ResultsCount)
 			}
 			endpointStatusPage2, err := scenario.Store.GetEndpointStatusByKey(testEndpoint.Key(), paging.NewEndpointStatusParams().WithResults(2, 1))
 			if err != nil {

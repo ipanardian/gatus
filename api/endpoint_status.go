@@ -92,7 +92,7 @@ func EndpointStatus(cfg *config.Config) fiber.Handler {
 			logr.Errorf("[api.EndpointStatus] Failed to decode key: %s", err.Error())
 			return c.Status(400).SendString("invalid key encoding")
 		}
-		endpointStatus, err := store.Get().GetEndpointStatusByKey(key, paging.NewEndpointStatusParams().WithResults(page, pageSize).WithEvents(1, cfg.Storage.MaximumNumberOfEvents))
+		endpointStatus, err := store.Get().GetEndpointStatusByKey(key, paging.NewEndpointStatusParams().WithResults(page, pageSize).WithEvents(1, cfg.Storage.MaximumNumberOfEvents).WithResultsCount())
 		if err != nil {
 			if errors.Is(err, common.ErrEndpointNotFound) {
 				return c.Status(404).SendString(err.Error())

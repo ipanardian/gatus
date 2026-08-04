@@ -650,36 +650,40 @@ func TestCacheKey(t *testing.T) {
 	}{
 		{
 			endpointKey:      "simple",
-			params:           paging.EndpointStatusParams{EventsPage: 1, EventsPageSize: 2, ResultsPage: 3, ResultsPageSize: 4},
-			expectedCacheKey: "simple-1-2-3-4",
+			params:           paging.EndpointStatusParams{EventsPage: 1, EventsPageSize: 2, ResultsPage: 3, ResultsPageSize: 4, IncludeResultsCount: true},
+			expectedCacheKey: "simple-1-2-3-4-true",
 			wantErr:          false,
 		},
 		{
 			endpointKey:      "with-hyphen",
 			params:           paging.EndpointStatusParams{EventsPage: 0, EventsPageSize: 0, ResultsPage: 1, ResultsPageSize: 20},
-			expectedCacheKey: "with-hyphen-0-0-1-20",
+			expectedCacheKey: "with-hyphen-0-0-1-20-false",
 			wantErr:          false,
 		},
 		{
 			endpointKey:      "with-multiple-hyphens",
 			params:           paging.EndpointStatusParams{EventsPage: 0, EventsPageSize: 0, ResultsPage: 2, ResultsPageSize: 20},
-			expectedCacheKey: "with-multiple-hyphens-0-0-2-20",
+			expectedCacheKey: "with-multiple-hyphens-0-0-2-20-false",
 			wantErr:          false,
 		},
 		{
-			overrideCacheKey: "invalid-a-2-3-4",
+			overrideCacheKey: "invalid-a-2-3-4-false",
 			wantErr:          true,
 		},
 		{
-			overrideCacheKey: "invalid-1-a-3-4",
+			overrideCacheKey: "invalid-1-a-3-4-false",
 			wantErr:          true,
 		},
 		{
-			overrideCacheKey: "invalid-1-2-a-4",
+			overrideCacheKey: "invalid-1-2-a-4-false",
 			wantErr:          true,
 		},
 		{
-			overrideCacheKey: "invalid-1-2-3-a",
+			overrideCacheKey: "invalid-1-2-3-a-false",
+			wantErr:          true,
+		},
+		{
+			overrideCacheKey: "invalid-1-2-3-4-not-bool",
 			wantErr:          true,
 		},
 		{
@@ -721,6 +725,9 @@ func TestCacheKey(t *testing.T) {
 			}
 			if extractedParams.ResultsPageSize != scenario.params.ResultsPageSize {
 				t.Errorf("expected ResultsPageSize %d, got %d", scenario.params.ResultsPageSize, extractedParams.ResultsPageSize)
+			}
+			if extractedParams.IncludeResultsCount != scenario.params.IncludeResultsCount {
+				t.Errorf("expected IncludeResultsCount %t, got %t", scenario.params.IncludeResultsCount, extractedParams.IncludeResultsCount)
 			}
 		})
 	}

@@ -46,8 +46,8 @@ const (
 )
 
 var (
-	// ErrNoEndpointOrSuiteInConfig is an error returned when a configuration file or directory has no endpoints configured
-	ErrNoEndpointOrSuiteInConfig = errors.New("configuration should contain at least one endpoint or suite")
+	// ErrNoEndpointOrSuiteInConfig is returned when a configuration has no regular endpoints, external endpoints, or suites.
+	ErrNoEndpointOrSuiteInConfig = errors.New("configuration should contain at least one endpoint, external endpoint, or suite")
 
 	// ErrConfigFileNotFound is an error returned when a configuration file could not be found
 	ErrConfigFileNotFound = errors.New("configuration file not found")
@@ -291,8 +291,8 @@ func parseAndValidateConfigBytes(yamlBytes []byte) (config *Config, err error) {
 	if err = yaml.Unmarshal(yamlBytes, &config); err != nil {
 		return
 	}
-	// Check if the configuration file at least has endpoints configured
-	if config == nil || (len(config.Endpoints) == 0 && len(config.Suites) == 0) {
+	// Check if the configuration file has at least one monitoring target configured.
+	if config == nil || (len(config.Endpoints) == 0 && len(config.ExternalEndpoints) == 0 && len(config.Suites) == 0) {
 		err = ErrNoEndpointOrSuiteInConfig
 	} else {
 		// XXX: Remove this in v6.0.0

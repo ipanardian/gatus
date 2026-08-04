@@ -10,8 +10,16 @@ func TestNewEndpointStatusParams(t *testing.T) {
 		ExpectedEventsPageSize  int
 		ExpectedResultsPage     int
 		ExpectedResultsPageSize int
+		ExpectedResultsCount    bool
 	}
 	scenarios := []Scenario{
+		{
+			Name:                    "with-results-count",
+			Params:                  NewEndpointStatusParams().WithResults(1, 20).WithResultsCount(),
+			ExpectedResultsPage:     1,
+			ExpectedResultsPageSize: 20,
+			ExpectedResultsCount:    true,
+		},
 		{
 			Name:                    "empty-params",
 			Params:                  NewEndpointStatusParams(),
@@ -66,6 +74,9 @@ func TestNewEndpointStatusParams(t *testing.T) {
 			}
 			if scenario.Params.ResultsPageSize != scenario.ExpectedResultsPageSize {
 				t.Errorf("expected ResultsPageSize to be %d, was %d", scenario.ExpectedResultsPageSize, scenario.Params.ResultsPageSize)
+			}
+			if scenario.Params.IncludeResultsCount != scenario.ExpectedResultsCount {
+				t.Errorf("expected IncludeResultsCount to be %t, was %t", scenario.ExpectedResultsCount, scenario.Params.IncludeResultsCount)
 			}
 		})
 	}
