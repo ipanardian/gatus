@@ -55,6 +55,9 @@ var (
 	// ErrInvalidSecurityConfig is an error returned when the security configuration is invalid
 	ErrInvalidSecurityConfig = errors.New("invalid security configuration")
 
+	// ErrInvalidSingleEndpoint is returned when ui.single-endpoint does not reference an enabled local endpoint.
+	ErrInvalidSingleEndpoint = errors.New("invalid ui.single-endpoint configuration")
+
 	// errEarlyReturn is returned to break out of a loop from a callback early
 	errEarlyReturn = errors.New("early escape")
 )
@@ -314,6 +317,9 @@ func parseAndValidateConfigBytes(yamlBytes []byte) (config *Config, err error) {
 		if err := ValidateUIConfig(config); err != nil {
 			return nil, err
 		}
+		if err := ValidateSingleEndpointConfig(config); err != nil {
+			return nil, err
+		}
 		if err := ValidateMaintenanceConfig(config); err != nil {
 			return nil, err
 		}
@@ -460,6 +466,22 @@ func ValidateUIConfig(config *Config) error {
 		}
 	}
 	return nil
+}
+
+// ValidateSingleEndpointConfig validates and canonicalizes ui.single-endpoint.
+func ValidateSingleEndpointConfig(config *Config) error {
+	if config.UI == nil || len(config.UI.SingleEndpoint) == 0 {
+		return nil
+	}
+	if ep := config.GetEndpointByKey(config.UI.SingleEndpoint); ep != nil && ep.IsEnabled() {
+		config.UI.SingleEndpoint = ep.Key()
+		return nil
+	}
+	if externalEndpoint := config.GetExternalEndpointByKey(config.UI.SingleEndpoint); externalEndpoint != nil && externalEndpoint.IsEnabled() {
+		config.UI.SingleEndpoint = externalEndpoint.Key()
+		return nil
+	}
+	return fmt.Errorf("%w: %q must reference an enabled endpoint or external endpoint", ErrInvalidSingleEndpoint, config.UI.SingleEndpoint)
 }
 
 func ValidateWebConfig(config *Config) error {

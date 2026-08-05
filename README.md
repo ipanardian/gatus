@@ -550,12 +550,30 @@ Allows you to configure the application wide defaults for the dashboard's UI. So
 | `ui.dark-mode`            | Whether to enable dark mode by default. Note that this is superseded by the user's operating system theme preferences.                   | `true`                                              |
 | `ui.default-sort-by`      | Default sorting option for endpoints in the dashboard. Can be `name`, `group`, or `health`. Note that user preferences override this.    | `name`                                              |
 | `ui.default-filter-by`    | Default filter option for endpoints in the dashboard. Can be `none`, `failing`, or `unstable`. Note that user preferences override this. | `none`                                              |
+| `ui.single-endpoint`      | Restricts the status page and viewer-facing endpoint APIs to one enabled endpoint key.                                                   | `""`                                                |
 | `ui.login-subtitle`       | Subtitle displayed on the OIDC login page.                                                                                               | `System Monitoring Dashboard`                       |
 | `ui.uptime-statistics`    | Whether to display uptime statistics on endpoint details pages.                                                                          | `true`                                              |
 | `ui.current-health`       | Whether to display the current health badge on endpoint details pages.                                                                   | `true`                                              |
 | `ui.response-time-trend`  | Whether to display the response time trend on endpoint details pages.                                                                    | `true`                                              |
 | `ui.events`               | Whether to display events on endpoint details pages.                                                                                     | `true`                                              |
 | `ui.response-time-badge-periods` | Response-time badge periods to display, in order. Supported values: `30d`, `7d`, `24h`, and `1h`. Use `[]` to hide all response-time badges. | `[30d, 7d, 24h, 1h]`                         |
+
+When `ui.single-endpoint` is configured, `/` redirects to the selected endpoint and the dashboard is unavailable. Endpoint keys use the normalized `{group}_{name}` format. For example:
+
+```yaml
+ui:
+  single-endpoint: europe_websocket
+
+external-endpoints:
+  - name: WebSocket
+    group: Europe
+    token: ${WEBSOCKET_TOKEN}
+  - name: API
+    group: Europe
+    token: ${API_TOKEN}
+```
+
+In this example, viewers can access only `europe_websocket`; viewer-facing pages and read APIs for `europe_api` return `404 Not Found`. External result ingestion remains available for all configured external endpoints, including hidden endpoints.
 
 ### Announcements
 System-wide announcements allow you to display important messages at the top of the status page. These can be used to inform users about planned maintenance, ongoing issues, or general information. You can use markdown to format your announcements.

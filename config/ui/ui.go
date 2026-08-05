@@ -53,6 +53,7 @@ type Config struct {
 	DarkMode                 *bool    `yaml:"dark-mode,omitempty"`                   // DarkMode is a flag to enable dark mode by default
 	DefaultSortBy            string   `yaml:"default-sort-by,omitempty"`             // DefaultSortBy is the default sort option ('name', 'group', 'health')
 	DefaultFilterBy          string   `yaml:"default-filter-by,omitempty"`           // DefaultFilterBy is the default filter option ('none', 'failing', 'unstable')
+	SingleEndpoint           string   `yaml:"single-endpoint,omitempty"`             // SingleEndpoint restricts the status page to one endpoint key
 	LoginSubtitle            string   `yaml:"login-subtitle,omitempty"`              // LoginSubtitle is the subtitle displayed on the OIDC login page
 	UptimeStatistics         *bool    `yaml:"uptime-statistics,omitempty"`           // UptimeStatistics controls whether uptime statistics are displayed on endpoint details pages
 	CurrentHealth            *bool    `yaml:"current-health,omitempty"`              // CurrentHealth controls whether the current health badge is displayed on endpoint details pages

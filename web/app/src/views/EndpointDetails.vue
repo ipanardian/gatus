@@ -2,7 +2,7 @@
   <div class="dashboard-container bg-background">
     <div class="container mx-auto px-4 py-8 max-w-7xl">
       <div class="mb-6">
-        <Button variant="ghost" class="mb-4" @click="goBack">
+        <Button v-if="!singleEndpointMode" variant="ghost" class="mb-4" @click="goBack">
           <ArrowLeft class="h-4 w-4 mr-2" />
           Back to Dashboard
         </Button>
@@ -232,6 +232,8 @@ const showAverageResponseTime = ref(localStorage.getItem('gatus:show-average-res
 const selectedChartDuration = ref('24h')
 const isRefreshing = ref(false)
 
+const configuredSingleEndpoint = window.config?.singleEndpoint
+const singleEndpointMode = configuredSingleEndpoint && configuredSingleEndpoint !== '{{ .UI.SingleEndpoint }}'
 const isSectionEnabled = (value) => String(value).toLowerCase() !== 'false'
 const uptimeStatisticsEnabled = isSectionEnabled(window.config?.uptimeStatistics)
 const currentHealthEnabled = isSectionEnabled(window.config?.currentHealth)

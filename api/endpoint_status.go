@@ -22,7 +22,11 @@ import (
 func EndpointStatuses(cfg *config.Config) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		page, pageSize := extractPageAndPageSizeFromRequest(c, cfg.Storage.MaximumNumberOfResults)
-		value, exists := cache.Get(fmt.Sprintf("endpoint-status-%d-%d", page, pageSize))
+		cacheKey := fmt.Sprintf("endpoint-status-%d-%d", page, pageSize)
+		if len(cfg.UI.SingleEndpoint) > 0 {
+			cacheKey += "-" + cfg.UI.SingleEndpoint
+		}
+		value, exists := cache.Get(cacheKey)
 		var data []byte
 		if !exists {
 			endpointStatuses, err := store.Get().GetAllEndpointStatuses(paging.NewEndpointStatusParams().WithResults(page, pageSize))
@@ -36,13 +40,23 @@ func EndpointStatuses(cfg *config.Config) fiber.Handler {
 			} else if endpointStatusesFromRemote != nil {
 				endpointStatuses = append(endpointStatuses, endpointStatusesFromRemote...)
 			}
+			if len(cfg.UI.SingleEndpoint) > 0 {
+				filteredStatuses := make([]*endpoint.Status, 0, 1)
+				for _, status := range endpointStatuses {
+					if status.Key == cfg.UI.SingleEndpoint {
+						filteredStatuses = append(filteredStatuses, status)
+						break
+					}
+				}
+				endpointStatuses = filteredStatuses
+			}
 			// Marshal endpoint statuses to JSON
 			data, err = json.Marshal(endpointStatuses)
 			if err != nil {
 				logr.Errorf("[api.EndpointStatuses] Unable to marshal object to JSON: %s", err.Error())
 				return c.Status(500).SendString("unable to marshal object to JSON")
 			}
-			cache.SetWithTTL(fmt.Sprintf("endpoint-status-%d-%d", page, pageSize), data, cacheTTL)
+			cache.SetWithTTL(cacheKey, data, cacheTTL)
 		} else {
 			data = value.([]byte)
 		}
