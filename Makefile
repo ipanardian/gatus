@@ -1,11 +1,35 @@
 BINARY=gatus
 
-IMAGE ?= gatus-nobi:latest
+TAG=latest
+IMAGE ?= gatus-nobi:$(TAG)
 CONTAINER ?= gatus
 HOST_PORT ?= 8080
 CONFIG_FILE ?= ./config.yaml
 DATA_DIR ?= ./data
 PRODUCTION_ENVIRONMENT ?= production
+
+.PHONY: help
+help:
+	@printf '%s\n' \
+		'make install          Build the Gatus binary' \
+		'make run              Run Gatus in development mode' \
+		'make run-binary       Run the built binary in development mode' \
+		'make test             Run all Go tests with coverage' \
+		'make clean            Remove the built binary' \
+		'make production-build Build the production Docker image' \
+		'make build-deploy     Build and deploy the production image' \
+		'make deploy           Deploy the existing production image' \
+		'make restart          Restart the production container' \
+		'make start            Start the production container' \
+		'make stop             Stop the production container' \
+		'make status           Show the production container status' \
+		'make logs             Follow the production container logs' \
+		'make docker-build     Build the default Gatus Docker image' \
+		'make docker-run       Run the default Gatus Docker image' \
+		'make docker-build-and-run Build and run the default Docker image' \
+		'make frontend-install Install frontend dependencies' \
+		'make frontend-build   Build the frontend' \
+		'make frontend-dev     Start the frontend development server'
 
 .PHONY: install
 install:
@@ -32,7 +56,7 @@ test:
 # Production deployment #
 #########################
 
-.PHONY: production-check production-build deploy restart start stop status logs
+.PHONY: production-check production-build build-deploy deploy restart start stop status logs
 production-check:
 	@test -f "$(CURDIR)/Dockerfile" || { echo "Missing $(CURDIR)/Dockerfile"; exit 1; }
 	@test -f "$(CONFIG_FILE)" || { echo "Missing $(CONFIG_FILE)"; exit 1; }
@@ -40,7 +64,10 @@ production-check:
 production-build: production-check
 	docker build -t "$(IMAGE)" "$(CURDIR)"
 
-deploy: production-build
+build-deploy: production-build
+	$(MAKE) deploy
+
+deploy: production-check
 	@mkdir -p "$(DATA_DIR)"
 	@docker rm -f "$(CONTAINER)" >/dev/null 2>&1 || true
 	docker run -d \
