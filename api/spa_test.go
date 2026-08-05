@@ -33,6 +33,7 @@ func TestSinglePageApplication(t *testing.T) {
 		},
 		UI: &ui.Config{
 			Title:                    "example-title",
+			Description:              "example-description",
 			UptimeStatistics:         &disabled,
 			CurrentHealth:            &disabled,
 			ResponseTimeTrend:        &disabled,
@@ -101,6 +102,17 @@ func TestSinglePageApplication(t *testing.T) {
 			strBody := string(body)
 			if !strings.Contains(strBody, cfg.UI.Title) {
 				t.Errorf("%s %s should have contained the title", request.Method, request.URL)
+			}
+			for _, metadata := range []string{
+				`<meta name="description" content="example-description"`,
+				`<meta property="og:title" content="example-title"`,
+				`<meta property="og:description" content="example-description"`,
+				`<meta name="twitter:title" content="example-title"`,
+				`<meta name="twitter:description" content="example-description"`,
+			} {
+				if !strings.Contains(strBody, metadata) {
+					t.Errorf("%s %s should have contained metadata %s", request.Method, request.URL, metadata)
+				}
 			}
 			for _, setting := range []string{`uptimeStatistics: "false"`, `currentHealth: "false"`, `responseTimeTrend: "false"`, `events: "false"`} {
 				if !strings.Contains(strBody, setting) {
