@@ -170,6 +170,29 @@ func TestStore_GetEndpointStatusByKey(t *testing.T) {
 	}
 }
 
+func TestStore_GetEndpointStatusByCustomKey(t *testing.T) {
+	scenarios := initStoresAndBaseScenarios(t, "TestStore_GetEndpointStatusByCustomKey")
+	defer cleanUp(scenarios)
+	ep := testEndpoint
+	ep.KeyOverride = "custom-endpoint-key"
+	result := testSuccessfulResult
+
+	for _, scenario := range scenarios {
+		t.Run(scenario.Name, func(t *testing.T) {
+			if err := scenario.Store.InsertEndpointResult(&ep, &result); err != nil {
+				t.Fatalf("failed to insert endpoint result: %v", err)
+			}
+			status, err := scenario.Store.GetEndpointStatusByKey(ep.Key(), paging.NewEndpointStatusParams())
+			if err != nil {
+				t.Fatalf("failed to retrieve endpoint status: %v", err)
+			}
+			if status.Key != ep.Key() {
+				t.Errorf("expected status key %s, got %s", ep.Key(), status.Key)
+			}
+		})
+	}
+}
+
 func TestStore_GetEndpointStatusForMissingStatusReturnsNil(t *testing.T) {
 	scenarios := initStoresAndBaseScenarios(t, "TestStore_GetEndpointStatusForMissingStatusReturnsNil")
 	defer cleanUp(scenarios)

@@ -174,3 +174,40 @@ func TestCreateExternalEndpointResult(t *testing.T) {
 		}
 	})
 }
+
+func TestCreateExternalEndpointResultWithCustomKey(t *testing.T) {
+	defer store.Get().Clear()
+	defer cache.Clear()
+	cfg := &config.Config{
+		Alerting:    &alerting.Config{},
+		Maintenance: &maintenance.Config{},
+		ExternalEndpoints: []*endpoint.ExternalEndpoint{
+			{
+				Name:      "WebSocket",
+				Group:     "Europe (Frankfurt) Price Provider",
+				CustomKey: "europe-websocket",
+				Token:     "token",
+			},
+		},
+	}
+	router := New(cfg).Router()
+
+	request := httptest.NewRequest("POST", "/api/v1/endpoints/europe-websocket/external?success=true", http.NoBody)
+	request.Header.Set("Authorization", "Bearer token")
+	response, err := router.Test(request)
+	if err != nil {
+		t.Fatalf("failed to push external endpoint result: %v", err)
+	}
+	defer response.Body.Close()
+	if response.StatusCode != http.StatusOK {
+		t.Fatalf("expected custom key URL to return %d, got %d", http.StatusOK, response.StatusCode)
+	}
+
+	status, err := store.Get().GetEndpointStatusByKey("europe-websocket", nil)
+	if err != nil {
+		t.Fatalf("failed to retrieve endpoint status by custom key: %v", err)
+	}
+	if status.Key != "europe-websocket" {
+		t.Errorf("expected stored endpoint key to be europe-websocket, got %s", status.Key)
+	}
+}

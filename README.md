@@ -332,6 +332,7 @@ For instance:
 | `external-endpoints[].enabled`            | Whether to monitor the endpoint.                                                                                                  | `true`         |
 | `external-endpoints[].name`               | Name of the endpoint. Can be anything.                                                                                            | Required `""`  |
 | `external-endpoints[].group`              | Group name. Used to group multiple endpoints together on the dashboard. <br />See [Endpoint groups](#endpoint-groups).            | `""`           |
+| `external-endpoints[].key`                | Optional URL-safe key used in push and viewer URLs. Defaults to the generated group/name key.                                     | `""`           |
 | `external-endpoints[].token`              | Bearer token required to push status to.                                                                                          | Required `""`  |
 | `external-endpoints[].alerts`             | List of all alerts for a given endpoint. <br />See [Alerting](#alerting).                                                         | `[]`           |
 | `external-endpoints[].heartbeat`          | Heartbeat configuration for monitoring when the external endpoint stops sending updates.                                          | `{}`           |
@@ -342,6 +343,7 @@ Example:
 external-endpoints:
   - name: ext-ep-test
     group: core
+    key: core-status
     token: "potato"
     heartbeat:
       interval: 30m  # Automatically create a failure if no update is received within 30 minutes
@@ -353,7 +355,7 @@ external-endpoints:
 
 To push the status of an external endpoint, you can use [gatus-cli](https://github.com/TwiN/gatus-cli):
 ```
-gatus-cli external-endpoint push --url https://status.example.org --key "core_ext-ep-test" --token "potato" --success
+gatus-cli external-endpoint push --url https://status.example.org --key "core-status" --token "potato" --success
 ```
 
 or send an HTTP request:
@@ -361,8 +363,9 @@ or send an HTTP request:
 POST /api/v1/endpoints/{key}/external?success={success}&error={error}&duration={duration}
 ```
 Where:
-- `{key}` has the pattern `<GROUP_NAME>_<ENDPOINT_NAME>` in which both variables have ` `, `/`, `_`, `,`, `.`, `#`, `+` and `&` replaced by `-`.
-  - Using the example configuration above, the key would be `core_ext-ep-test`.
+- `{key}` uses `external-endpoints[].key` when configured. Custom keys may contain lowercase letters, numbers, hyphens, and underscores, and must start with a letter or number.
+  - Without an explicit key, it has the pattern `<GROUP_NAME>_<ENDPOINT_NAME>` in which both variables have ` `, `/`, `_`, `,`, `.`, `#`, `+` and `&` replaced by `-`.
+  - Using the example configuration above, the key is `core-status`.
 - `{success}` is a boolean (`true` or `false`) value indicating whether the health check was successful or not.
 - `{error}` (optional): a string describing the reason for a failed health check. If {success} is false, this should contain the error message; if the check is successful, this will be ignored.
 - `{duration}` (optional): the time that the request took as a duration string (e.g. 10s).

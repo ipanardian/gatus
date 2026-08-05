@@ -2,6 +2,7 @@ package endpoint
 
 import (
 	"errors"
+	"regexp"
 	"time"
 
 	"github.com/TwiN/gatus/v5/alerting/alert"
@@ -16,7 +17,12 @@ var (
 
 	// ErrExternalEndpointHeartbeatIntervalTooLow is the error with which Gatus will panic if an external endpoint's heartbeat interval is less than 10 seconds.
 	ErrExternalEndpointHeartbeatIntervalTooLow = errors.New("heartbeat interval must be at least 10 seconds")
+
+	// ErrInvalidExternalEndpointKey is returned when a custom external endpoint key is not URL-safe.
+	ErrInvalidExternalEndpointKey = errors.New("key must contain only lowercase letters, numbers, hyphens, and underscores, and must start with a letter or number")
 )
+
+var externalEndpointKeyPattern = regexp.MustCompile(`^[a-z0-9][a-z0-9_-]*$`)
 
 // ExternalEndpoint is an endpoint whose result is pushed from outside Gatus, which means that
 // said endpoints are not monitored by Gatus itself; Gatus only displays their results and takes
@@ -30,6 +36,9 @@ type ExternalEndpoint struct {
 
 	// Group the endpoint is a part of. Used for grouping multiple endpoints together on the front end.
 	Group string `yaml:"group,omitempty"`
+
+	// CustomKey overrides the generated group/name key used in URLs and storage.
+	CustomKey string `yaml:"key,omitempty"`
 
 	// Token is the bearer token that must be provided through the Authorization header to push results to the endpoint
 	Token string `yaml:"token,omitempty"`
@@ -58,6 +67,9 @@ func (externalEndpoint *ExternalEndpoint) ValidateAndSetDefaults() error {
 	if len(externalEndpoint.Token) == 0 {
 		return ErrExternalEndpointWithNoToken
 	}
+	if len(externalEndpoint.CustomKey) > 0 && !externalEndpointKeyPattern.MatchString(externalEndpoint.CustomKey) {
+		return ErrInvalidExternalEndpointKey
+	}
 	if externalEndpoint.Heartbeat.Interval != 0 && externalEndpoint.Heartbeat.Interval < 10*time.Second {
 		// If the heartbeat interval is set (non-0), it must be at least 10 seconds.
 		return ErrExternalEndpointHeartbeatIntervalTooLow
@@ -83,6 +95,9 @@ func (externalEndpoint *ExternalEndpoint) DisplayName() string {
 
 // Key returns the unique key for the Endpoint
 func (externalEndpoint *ExternalEndpoint) Key() string {
+	if len(externalEndpoint.CustomKey) > 0 {
+		return externalEndpoint.CustomKey
+	}
 	return key.ConvertGroupAndNameToKey(externalEndpoint.Group, externalEndpoint.Name)
 }
 
@@ -92,6 +107,7 @@ func (externalEndpoint *ExternalEndpoint) ToEndpoint() *Endpoint {
 		Enabled:                 externalEndpoint.Enabled,
 		Name:                    externalEndpoint.Name,
 		Group:                   externalEndpoint.Group,
+		KeyOverride:             externalEndpoint.CustomKey,
 		Alerts:                  externalEndpoint.Alerts,
 		NumberOfFailuresInARow:  externalEndpoint.NumberOfFailuresInARow,
 		NumberOfSuccessesInARow: externalEndpoint.NumberOfSuccessesInARow,

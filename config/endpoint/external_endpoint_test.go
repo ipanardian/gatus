@@ -224,6 +224,15 @@ func TestExternalEndpoint_Key(t *testing.T) {
 			},
 			expected: "test-group_test-endpoint-with-spaces",
 		},
+		{
+			name: "explicit-key",
+			endpoint: &ExternalEndpoint{
+				Name:      "WebSocket",
+				Group:     "Europe (Frankfurt) Price Provider",
+				CustomKey: "europe-websocket",
+			},
+			expected: "europe-websocket",
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -243,10 +252,11 @@ func TestExternalEndpoint_ToEndpoint(t *testing.T) {
 		{
 			name: "complete-external-endpoint",
 			externalEndpoint: &ExternalEndpoint{
-				Enabled: boolPtr(true),
-				Name:    "test-endpoint",
-				Group:   "test-group",
-				Token:   "test-token",
+				Enabled:   boolPtr(true),
+				Name:      "test-endpoint",
+				Group:     "test-group",
+				CustomKey: "custom-endpoint-key",
+				Token:     "test-token",
 				Alerts: []*alert.Alert{
 					{
 						Type: alert.TypeSlack,
@@ -359,6 +369,25 @@ func TestExternalEndpoint_ValidationEdgeCases(t *testing.T) {
 				Token: "very-long-token-that-should-still-be-valid-even-though-it-is-extremely-long-and-might-not-be-practical-in-real-world-scenarios",
 			},
 			wantErr: false,
+		},
+		{
+			name: "valid-custom-key",
+			endpoint: &ExternalEndpoint{
+				Name:      "WebSocket",
+				Group:     "Europe (Frankfurt) Price Provider",
+				CustomKey: "europe-websocket",
+				Token:     "valid-token",
+			},
+			wantErr: false,
+		},
+		{
+			name: "custom-key-with-spaces",
+			endpoint: &ExternalEndpoint{
+				Name:      "WebSocket",
+				CustomKey: "europe websocket",
+				Token:     "valid-token",
+			},
+			wantErr: true,
 		},
 	}
 	for _, tt := range tests {

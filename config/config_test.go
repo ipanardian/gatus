@@ -1858,6 +1858,7 @@ func TestParseAndValidateConfigBytesWithOnlyExternalEndpoints(t *testing.T) {
 external-endpoints:
   - name: worker
     group: external
+    key: worker-status
     token: secret
 `))
 	if err != nil {
@@ -1865,6 +1866,9 @@ external-endpoints:
 	}
 	if len(config.ExternalEndpoints) != 1 {
 		t.Fatalf("expected one external endpoint, got %d", len(config.ExternalEndpoints))
+	}
+	if config.ExternalEndpoints[0].Key() != "worker-status" {
+		t.Fatalf("expected custom external endpoint key worker-status, got %s", config.ExternalEndpoints[0].Key())
 	}
 }
 

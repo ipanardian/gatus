@@ -723,6 +723,7 @@ func (s *Store) getEndpointStatusByKey(tx *sql.Tx, key string, parameters *pagin
 		return nil, err
 	}
 	endpointStatus := endpoint.NewStatus(group, endpointName)
+	endpointStatus.Key = key
 	if parameters.IncludeResultsCount {
 		numberOfResults, countErr := s.getNumberOfResultsByEndpointID(tx, endpointID)
 		if countErr != nil {
