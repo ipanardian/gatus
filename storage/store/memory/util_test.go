@@ -64,6 +64,10 @@ func TestShallowCopyEndpointStatus(t *testing.T) {
 	if len(ShallowCopyEndpointStatus(endpointStatus, paging.NewEndpointStatusParams().WithResults(1, 50)).Results) != 25 {
 		t.Error("expected to have 25 results, because there's only 25 results")
 	}
+	statusWithCount := ShallowCopyEndpointStatus(endpointStatus, paging.NewEndpointStatusParams().WithResults(1, 10).WithResultsCount())
+	if statusWithCount.ResultsCount != 25 {
+		t.Errorf("expected ResultsCount to be 25, got %d", statusWithCount.ResultsCount)
+	}
 }
 
 func TestShallowCopySuiteStatus(t *testing.T) {

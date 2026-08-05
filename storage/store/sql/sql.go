@@ -723,6 +723,14 @@ func (s *Store) getEndpointStatusByKey(tx *sql.Tx, key string, parameters *pagin
 		return nil, err
 	}
 	endpointStatus := endpoint.NewStatus(group, endpointName)
+	endpointStatus.Key = key
+	if parameters.IncludeResultsCount {
+		numberOfResults, countErr := s.getNumberOfResultsByEndpointID(tx, endpointID)
+		if countErr != nil {
+			return nil, countErr
+		}
+		endpointStatus.ResultsCount = int(numberOfResults)
+	}
 	if parameters.EventsPageSize > 0 {
 		if endpointStatus.Events, err = s.getEndpointEventsByEndpointID(tx, endpointID, parameters.EventsPage, parameters.EventsPageSize); err != nil {
 			logr.Errorf("[sql.getEndpointStatusByKey] Failed to retrieve events for key=%s: %s", key, err.Error())
@@ -1134,29 +1142,32 @@ func (s *Store) mergeHourlyUptimeEntriesOlderThanMergeThresholdIntoDailyUptimeEn
 }
 
 func generateCacheKey(endpointKey string, p *paging.EndpointStatusParams) string {
-	return fmt.Sprintf("%s-%d-%d-%d-%d", endpointKey, p.EventsPage, p.EventsPageSize, p.ResultsPage, p.ResultsPageSize)
+	return fmt.Sprintf("%s-%d-%d-%d-%d-%t", endpointKey, p.EventsPage, p.EventsPageSize, p.ResultsPage, p.ResultsPageSize, p.IncludeResultsCount)
 }
 
 func extractKeyAndParamsFromCacheKey(cacheKey string) (string, *paging.EndpointStatusParams, error) {
 	parts := strings.Split(cacheKey, "-")
-	if len(parts) < 5 {
+	if len(parts) < 6 {
 		return "", nil, fmt.Errorf("invalid cache key: %s", cacheKey)
 	}
 	params := &paging.EndpointStatusParams{}
 	var err error
-	if params.EventsPage, err = strconv.Atoi(parts[len(parts)-4]); err != nil {
+	if params.EventsPage, err = strconv.Atoi(parts[len(parts)-5]); err != nil {
 		return "", nil, fmt.Errorf("invalid cache key: %w", err)
 	}
-	if params.EventsPageSize, err = strconv.Atoi(parts[len(parts)-3]); err != nil {
+	if params.EventsPageSize, err = strconv.Atoi(parts[len(parts)-4]); err != nil {
 		return "", nil, fmt.Errorf("invalid cache key: %w", err)
 	}
-	if params.ResultsPage, err = strconv.Atoi(parts[len(parts)-2]); err != nil {
+	if params.ResultsPage, err = strconv.Atoi(parts[len(parts)-3]); err != nil {
 		return "", nil, fmt.Errorf("invalid cache key: %w", err)
 	}
-	if params.ResultsPageSize, err = strconv.Atoi(parts[len(parts)-1]); err != nil {
+	if params.ResultsPageSize, err = strconv.Atoi(parts[len(parts)-2]); err != nil {
 		return "", nil, fmt.Errorf("invalid cache key: %w", err)
 	}
-	return strings.Join(parts[:len(parts)-4], "-"), params, nil
+	if params.IncludeResultsCount, err = strconv.ParseBool(parts[len(parts)-1]); err != nil {
+		return "", nil, fmt.Errorf("invalid cache key: %w", err)
+	}
+	return strings.Join(parts[:len(parts)-5], "-"), params, nil
 }
 
 // GetAllSuiteStatuses returns all monitored suite statuses

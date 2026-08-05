@@ -3,7 +3,7 @@
     <Button
       variant="outline"
       size="sm"
-      :disabled="currentPage >= maxPages"
+      :disabled="currentPage <= 1"
       @click="previousPage"
       class="flex items-center gap-1"
     >
@@ -18,7 +18,7 @@
     <Button
       variant="outline"
       size="sm"
-      :disabled="currentPage <= 1"
+      :disabled="currentPage >= maxPages"
       @click="nextPage"
       class="flex items-center gap-1"
     >
@@ -38,6 +38,10 @@ const props = defineProps({
   currentPageProp: {
     type: Number,
     default: 1
+  },
+  totalResults: {
+    type: Number,
+    default: 0
   }
 })
 
@@ -46,27 +50,16 @@ const emit = defineEmits(['page'])
 const currentPage = ref(props.currentPageProp)
 
 const maxPages = computed(() => {
-  // Use maximumNumberOfResults from config if available, otherwise default to 100
-  let maxResults = 100 // Default value
-  // Check if window.config exists and has maximumNumberOfResults
-  if (typeof window !== 'undefined' && window.config && window.config.maximumNumberOfResults) {
-    const parsed = parseInt(window.config.maximumNumberOfResults)
-    if (!isNaN(parsed)) {
-      maxResults = parsed
-    }
-  }
-  return Math.ceil(maxResults / props.numberOfResultsPerPage)
+  return Math.max(1, Math.ceil(props.totalResults / props.numberOfResultsPerPage))
 })
 
 const nextPage = () => {
-  // "Next" should show newer data (lower page numbers)
-  currentPage.value--
+  currentPage.value++
   emit('page', currentPage.value)
 }
 
 const previousPage = () => {
-  // "Previous" should show older data (higher page numbers)
-  currentPage.value++
+  currentPage.value--
   emit('page', currentPage.value)
 }
 </script>

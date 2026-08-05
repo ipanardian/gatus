@@ -254,7 +254,7 @@ If you want to test it locally, see [Docker](#docker).
 | `storage`                    | [Storage configuration](#storage).                                                                                                       | `{}`          |
 | `alerting`                   | [Alerting configuration](#alerting).                                                                                                     | `{}`          |
 | `announcements`              | [Announcements configuration](#announcements).                                                                                           | `[]`          |
-| `endpoints`                  | [Endpoints configuration](#endpoints).                                                                                                   | Required `[]` |
+| `endpoints`                  | [Endpoints configuration](#endpoints).                                                                                                   | `[]`          |
 | `external-endpoints`         | [External Endpoints configuration](#external-endpoints).                                                                                 | `[]`          |
 | `security`                   | [Security configuration](#security).                                                                                                     | `{}`          |
 | `concurrency`                | Maximum number of endpoints/suites to monitor concurrently. Set to `0` for unlimited. See [Concurrency](#concurrency).                   | `3`           |
@@ -263,6 +263,8 @@ If you want to test it locally, see [Docker](#docker).
 | `web`                        | [Web configuration](#web).                                                                                                               | `{}`          |
 | `ui`                         | [UI configuration](#ui).                                                                                                                 | `{}`          |
 | `maintenance`                | [Maintenance configuration](#maintenance).                                                                                               | `{}`          |
+
+At least one regular endpoint, external endpoint, or suite must be configured.
 
 If you want more verbose logging, you may set the `GATUS_LOG_LEVEL` environment variable to `DEBUG`.
 Conversely, if you want less verbose logging, you can set the aforementioned environment variable to `WARN`, `ERROR` or `FATAL`.
@@ -275,7 +277,7 @@ You can then configure alerts to be triggered when an endpoint is unhealthy once
 
 | Parameter                                       | Description                                                                                                                                 | Default                    |
 |:------------------------------------------------|:--------------------------------------------------------------------------------------------------------------------------------------------|:---------------------------|
-| `endpoints`                                     | List of endpoints to monitor.                                                                                                               | Required `[]`              |
+| `endpoints`                                     | List of endpoints to monitor.                                                                                                               | `[]`                       |
 | `endpoints[].enabled`                           | Whether to monitor the endpoint.                                                                                                            | `true`                     |
 | `endpoints[].name`                              | Name of the endpoint. Can be anything.                                                                                                      | Required `""`              |
 | `endpoints[].group`                             | Group name. Used to group multiple endpoints together on the dashboard. <br />See [Endpoint groups](#endpoint-groups).                      | `""`                       |
@@ -330,6 +332,7 @@ For instance:
 | `external-endpoints[].enabled`            | Whether to monitor the endpoint.                                                                                                  | `true`         |
 | `external-endpoints[].name`               | Name of the endpoint. Can be anything.                                                                                            | Required `""`  |
 | `external-endpoints[].group`              | Group name. Used to group multiple endpoints together on the dashboard. <br />See [Endpoint groups](#endpoint-groups).            | `""`           |
+| `external-endpoints[].key`                | Optional URL-safe key used in push and viewer URLs. Defaults to the generated group/name key.                                     | `""`           |
 | `external-endpoints[].token`              | Bearer token required to push status to.                                                                                          | Required `""`  |
 | `external-endpoints[].alerts`             | List of all alerts for a given endpoint. <br />See [Alerting](#alerting).                                                         | `[]`           |
 | `external-endpoints[].heartbeat`          | Heartbeat configuration for monitoring when the external endpoint stops sending updates.                                          | `{}`           |
@@ -340,6 +343,7 @@ Example:
 external-endpoints:
   - name: ext-ep-test
     group: core
+    key: core-status
     token: "potato"
     heartbeat:
       interval: 30m  # Automatically create a failure if no update is received within 30 minutes
@@ -351,7 +355,7 @@ external-endpoints:
 
 To push the status of an external endpoint, you can use [gatus-cli](https://github.com/TwiN/gatus-cli):
 ```
-gatus-cli external-endpoint push --url https://status.example.org --key "core_ext-ep-test" --token "potato" --success
+gatus-cli external-endpoint push --url https://status.example.org --key "core-status" --token "potato" --success
 ```
 
 or send an HTTP request:
@@ -359,8 +363,9 @@ or send an HTTP request:
 POST /api/v1/endpoints/{key}/external?success={success}&error={error}&duration={duration}
 ```
 Where:
-- `{key}` has the pattern `<GROUP_NAME>_<ENDPOINT_NAME>` in which both variables have ` `, `/`, `_`, `,`, `.`, `#`, `+` and `&` replaced by `-`.
-  - Using the example configuration above, the key would be `core_ext-ep-test`.
+- `{key}` uses `external-endpoints[].key` when configured. Custom keys may contain lowercase letters, numbers, hyphens, and underscores, and must start with a letter or number.
+  - Without an explicit key, it has the pattern `<GROUP_NAME>_<ENDPOINT_NAME>` in which both variables have ` `, `/`, `_`, `,`, `.`, `#`, `+` and `&` replaced by `-`.
+  - Using the example configuration above, the key is `core-status`.
 - `{success}` is a boolean (`true` or `false`) value indicating whether the health check was successful or not.
 - `{error}` (optional): a string describing the reason for a failed health check. If {success} is false, this should contain the error message; if the check is successful, this will be ignored.
 - `{duration}` (optional): the time that the request took as a duration string (e.g. 10s).
@@ -548,7 +553,30 @@ Allows you to configure the application wide defaults for the dashboard's UI. So
 | `ui.dark-mode`            | Whether to enable dark mode by default. Note that this is superseded by the user's operating system theme preferences.                   | `true`                                              |
 | `ui.default-sort-by`      | Default sorting option for endpoints in the dashboard. Can be `name`, `group`, or `health`. Note that user preferences override this.    | `name`                                              |
 | `ui.default-filter-by`    | Default filter option for endpoints in the dashboard. Can be `none`, `failing`, or `unstable`. Note that user preferences override this. | `none`                                              |
+| `ui.single-endpoint`      | Restricts the status page and viewer-facing endpoint APIs to one enabled endpoint key.                                                   | `""`                                                |
 | `ui.login-subtitle`       | Subtitle displayed on the OIDC login page.                                                                                               | `System Monitoring Dashboard`                       |
+| `ui.uptime-statistics`    | Whether to display uptime statistics on endpoint details pages.                                                                          | `true`                                              |
+| `ui.current-health`       | Whether to display the current health badge on endpoint details pages.                                                                   | `true`                                              |
+| `ui.response-time-trend`  | Whether to display the response time trend on endpoint details pages.                                                                    | `true`                                              |
+| `ui.events`               | Whether to display events on endpoint details pages.                                                                                     | `true`                                              |
+| `ui.response-time-badge-periods` | Response-time badge periods to display, in order. Supported values: `30d`, `7d`, `24h`, and `1h`. Use `[]` to hide all response-time badges. | `[30d, 7d, 24h, 1h]`                         |
+
+When `ui.single-endpoint` is configured, `/` redirects to the selected endpoint and the dashboard is unavailable. Endpoint keys use the normalized `{group}_{name}` format. For example:
+
+```yaml
+ui:
+  single-endpoint: europe_websocket
+
+external-endpoints:
+  - name: WebSocket
+    group: Europe
+    token: ${WEBSOCKET_TOKEN}
+  - name: API
+    group: Europe
+    token: ${API_TOKEN}
+```
+
+In this example, viewers can access only `europe_websocket`; viewer-facing pages and read APIs for `europe_api` return `404 Not Found`. External result ingestion remains available for all configured external endpoints, including hidden endpoints.
 
 ### Announcements
 System-wide announcements allow you to display important messages at the top of the status page. These can be used to inform users about planned maintenance, ongoing issues, or general information. You can use markdown to format your announcements.

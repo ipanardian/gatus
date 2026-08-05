@@ -2,8 +2,11 @@ package ui
 
 import (
 	"errors"
+	"slices"
 	"strconv"
 	"testing"
+
+	"gopkg.in/yaml.v3"
 )
 
 func TestConfig_ValidateAndSetDefaults(t *testing.T) {
@@ -194,6 +197,91 @@ func TestGetDefaultConfig(t *testing.T) {
 	if defaultConfig.LoginSubtitle != defaultLoginSubtitle {
 		t.Error("expected GetDefaultConfig() to return defaultLoginSubtitle, got", defaultConfig.LoginSubtitle)
 	}
+	if !defaultConfig.IsUptimeStatisticsEnabled() {
+		t.Error("expected uptime statistics to be enabled by default")
+	}
+	if !defaultConfig.IsCurrentHealthEnabled() {
+		t.Error("expected current health to be enabled by default")
+	}
+	if !defaultConfig.IsResponseTimeTrendEnabled() {
+		t.Error("expected response time trend to be enabled by default")
+	}
+	if !defaultConfig.IsEventsEnabled() {
+		t.Error("expected events to be enabled by default")
+	}
+	if !slices.Equal(defaultConfig.ResponseTimeBadgePeriods, defaultResponseTimeBadgePeriods) {
+		t.Errorf("expected default response time badge periods %v, got %v", defaultResponseTimeBadgePeriods, defaultConfig.ResponseTimeBadgePeriods)
+	}
+}
+
+func TestConfig_EndpointDetailsSections(t *testing.T) {
+	cfg := &Config{}
+	if err := yaml.Unmarshal([]byte(`
+uptime-statistics: false
+current-health: false
+response-time-trend: false
+events: false
+response-time-badge-periods: [30d, 7d]
+`), cfg); err != nil {
+		t.Fatal("expected valid UI configuration, got", err)
+	}
+	if err := cfg.ValidateAndSetDefaults(); err != nil {
+		t.Fatal("expected no error, got", err)
+	}
+	if cfg.IsUptimeStatisticsEnabled() {
+		t.Error("expected uptime statistics to remain disabled")
+	}
+	if cfg.IsCurrentHealthEnabled() {
+		t.Error("expected current health to remain disabled")
+	}
+	if cfg.IsResponseTimeTrendEnabled() {
+		t.Error("expected response time trend to remain disabled")
+	}
+	if cfg.IsEventsEnabled() {
+		t.Error("expected events to remain disabled")
+	}
+	if !slices.Equal(cfg.ResponseTimeBadgePeriods, []string{"30d", "7d"}) {
+		t.Errorf("expected configured response time badge periods [30d 7d], got %v", cfg.ResponseTimeBadgePeriods)
+	}
+
+	defaultConfig := &Config{}
+	if err := defaultConfig.ValidateAndSetDefaults(); err != nil {
+		t.Fatal("expected no error, got", err)
+	}
+	if !defaultConfig.IsUptimeStatisticsEnabled() {
+		t.Error("expected unset uptime statistics to default to enabled")
+	}
+	if !defaultConfig.IsCurrentHealthEnabled() {
+		t.Error("expected unset current health to default to enabled")
+	}
+	if !defaultConfig.IsResponseTimeTrendEnabled() {
+		t.Error("expected unset response time trend to default to enabled")
+	}
+	if !defaultConfig.IsEventsEnabled() {
+		t.Error("expected unset events to default to enabled")
+	}
+	if !slices.Equal(defaultConfig.ResponseTimeBadgePeriods, defaultResponseTimeBadgePeriods) {
+		t.Errorf("expected unset response time badge periods to default to %v, got %v", defaultResponseTimeBadgePeriods, defaultConfig.ResponseTimeBadgePeriods)
+	}
+}
+
+func TestConfig_ValidateAndSetDefaults_ResponseTimeBadgePeriods(t *testing.T) {
+	t.Run("empty-list-disables-all-badges", func(t *testing.T) {
+		cfg := &Config{ResponseTimeBadgePeriods: []string{}}
+		if err := cfg.ValidateAndSetDefaults(); err != nil {
+			t.Fatal("expected no error, got", err)
+		}
+		if cfg.ResponseTimeBadgePeriods == nil || len(cfg.ResponseTimeBadgePeriods) != 0 {
+			t.Errorf("expected an explicitly empty period list to remain empty, got %v", cfg.ResponseTimeBadgePeriods)
+		}
+	})
+
+	t.Run("invalid-period", func(t *testing.T) {
+		cfg := &Config{ResponseTimeBadgePeriods: []string{"30d", "2d"}}
+		if err := cfg.ValidateAndSetDefaults(); !errors.Is(err, ErrInvalidResponseTimeBadgePeriod) {
+			t.Errorf("expected ErrInvalidResponseTimeBadgePeriod, got %v", err)
+		}
+	})
 }
 
 func TestConfig_ValidateAndSetDefaults_DefaultSortBy(t *testing.T) {

@@ -17,6 +17,9 @@ type Status struct {
 	// Results is the list of endpoint evaluation results
 	Results []*Result `json:"results"`
 
+	// ResultsCount is the total number of available results before pagination
+	ResultsCount int `json:"resultsCount,omitempty"`
+
 	// Events is a list of events
 	Events []*Event `json:"events,omitempty"`
 

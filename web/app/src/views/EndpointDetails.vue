@@ -2,7 +2,7 @@
   <div class="dashboard-container bg-background">
     <div class="container mx-auto px-4 py-8 max-w-7xl">
       <div class="mb-6">
-        <Button variant="ghost" class="mb-4" @click="goBack">
+        <Button v-if="!singleEndpointMode" variant="ghost" class="mb-4" @click="goBack">
           <ArrowLeft class="h-4 w-4 mr-2" />
           Back to Dashboard
         </Button>
@@ -94,15 +94,15 @@
                   @showTooltip="showTooltip"
                   class="border-0 shadow-none bg-transparent p-0"
                 />
-                <div v-if="endpointStatus && endpointStatus.key" class="pt-4 border-t">
-                  <Pagination @page="changePage" :numberOfResultsPerPage="resultPageSize" :currentPageProp="currentPage" />
+                <div v-if="totalResultPages > 1" class="pt-4 border-t">
+                  <Pagination @page="changePage" :numberOfResultsPerPage="resultPageSize" :currentPageProp="currentPage" :totalResults="totalResults" />
                 </div>
               </div>
             </CardContent>
           </Card>
 
-          <div v-if="showResponseTimeChartAndBadges" class="space-y-6">
-            <Card>
+          <div v-if="showResponseTimeChartAndBadges && (responseTimeTrendEnabled || responseTimeBadgePeriods.length > 0)" class="space-y-6">
+            <Card v-if="responseTimeTrendEnabled">
               <CardHeader>
                 <div class="flex items-center justify-between">
                   <CardTitle>Response Time Trend</CardTitle>
@@ -127,11 +127,15 @@
               </CardContent>
             </Card>
 
-            <div class="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-              <Card v-for="period in ['30d', '7d', '24h', '1h']" :key="period">
+            <div
+              v-if="responseTimeBadgePeriods.length > 0"
+              class="grid gap-4"
+              style="grid-template-columns: repeat(auto-fit, minmax(min(100%, 16rem), 1fr));"
+            >
+              <Card v-for="period in responseTimeBadgePeriods" :key="period">
                 <CardHeader class="pb-2">
                   <CardTitle class="text-sm font-medium text-muted-foreground text-center">
-                    {{ period === '30d' ? 'Last 30 days' : period === '7d' ? 'Last 7 days' : period === '24h' ? 'Last 24 hours' : 'Last hour' }}
+                    {{ responseTimePeriodLabels[period] }}
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
@@ -141,7 +145,7 @@
             </div>
           </div>
 
-          <Card>
+          <Card v-if="uptimeStatisticsEnabled">
             <CardHeader>
               <CardTitle>Uptime Statistics</CardTitle>
             </CardHeader>
@@ -157,7 +161,7 @@
             </CardContent>
           </Card>
 
-          <Card>
+          <Card v-if="currentHealthEnabled">
             <CardHeader>
               <CardTitle>Current Health</CardTitle>
             </CardHeader>
@@ -168,7 +172,7 @@
             </CardContent>
           </Card>
 
-          <Card v-if="events && events.length > 0">
+          <Card v-if="eventsEnabled && events && events.length > 0">
             <CardHeader>
               <CardTitle>Events</CardTitle>
             </CardHeader>
@@ -227,6 +231,26 @@ const showResponseTimeChartAndBadges = ref(false)
 const showAverageResponseTime = ref(localStorage.getItem('gatus:show-average-response-time') !== 'false')
 const selectedChartDuration = ref('24h')
 const isRefreshing = ref(false)
+
+const configuredSingleEndpoint = window.config?.singleEndpoint
+const singleEndpointMode = configuredSingleEndpoint && configuredSingleEndpoint !== '{{ .UI.SingleEndpoint }}'
+const isSectionEnabled = (value) => String(value).toLowerCase() !== 'false'
+const uptimeStatisticsEnabled = isSectionEnabled(window.config?.uptimeStatistics)
+const currentHealthEnabled = isSectionEnabled(window.config?.currentHealth)
+const responseTimeTrendEnabled = isSectionEnabled(window.config?.responseTimeTrend)
+const eventsEnabled = isSectionEnabled(window.config?.events)
+const responseTimeBadgePeriods = (window.config?.responseTimeBadgePeriods || '')
+  .split(',')
+  .filter(Boolean)
+const responseTimePeriodLabels = {
+  '30d': 'Last 30 days',
+  '7d': 'Last 7 days',
+  '24h': 'Last 24 hours',
+  '1h': 'Last hour'
+}
+
+const totalResults = computed(() => endpointStatus.value?.resultsCount ?? endpointStatus.value?.results?.length ?? 0)
+const totalResultPages = computed(() => Math.max(1, Math.ceil(totalResults.value / resultPageSize)))
 
 const latestResult = computed(() => {
   // Use currentStatus for the actual latest result

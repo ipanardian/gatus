@@ -136,6 +136,9 @@ type Endpoint struct {
 	// NumberOfSuccessesInARow is the number of successful evaluations in a row
 	NumberOfSuccessesInARow int `yaml:"-"`
 
+	// KeyOverride is used internally by external endpoints with an explicit key.
+	KeyOverride string `yaml:"-"`
+
 	// LastReminderSent is the time at which the last reminder was sent for this endpoint.
 	LastReminderSent time.Time `yaml:"-"`
 
@@ -273,6 +276,9 @@ func (e *Endpoint) DisplayName() string {
 
 // Key returns the unique key for the Endpoint
 func (e *Endpoint) Key() string {
+	if len(e.KeyOverride) > 0 {
+		return e.KeyOverride
+	}
 	return key.ConvertGroupAndNameToKey(e.Group, e.Name)
 }
 

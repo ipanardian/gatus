@@ -1853,6 +1853,125 @@ func TestParseAndValidateConfigBytesWithNoEndpoints(t *testing.T) {
 	}
 }
 
+func TestParseAndValidateConfigBytesWithOnlyExternalEndpoints(t *testing.T) {
+	config, err := parseAndValidateConfigBytes([]byte(`
+external-endpoints:
+  - name: worker
+    group: external
+    key: worker-status
+    token: secret
+`))
+	if err != nil {
+		t.Fatalf("expected external-endpoint-only configuration to be valid, got %v", err)
+	}
+	if len(config.ExternalEndpoints) != 1 {
+		t.Fatalf("expected one external endpoint, got %d", len(config.ExternalEndpoints))
+	}
+	if config.ExternalEndpoints[0].Key() != "worker-status" {
+		t.Fatalf("expected custom external endpoint key worker-status, got %s", config.ExternalEndpoints[0].Key())
+	}
+}
+
+func TestParseAndValidateConfigBytesWithSingleEndpoint(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name        string
+		config      string
+		expectedKey string
+		expectedErr error
+	}{
+		{
+			name: "unset",
+			config: `
+external-endpoints:
+  - name: WebSocket
+    group: Europe
+    token: token
+`,
+		},
+		{
+			name: "regular-endpoint",
+			config: `
+ui:
+  single-endpoint: europe_websocket
+endpoints:
+  - name: WebSocket
+    group: Europe
+    url: https://example.com
+    conditions:
+      - "[STATUS] == 200"
+`,
+			expectedKey: "europe_websocket",
+		},
+		{
+			name: "external-endpoint",
+			config: `
+ui:
+  single-endpoint: europe_websocket
+external-endpoints:
+  - name: WebSocket
+    group: Europe
+    token: token
+`,
+			expectedKey: "europe_websocket",
+		},
+		{
+			name: "unknown-endpoint",
+			config: `
+ui:
+  single-endpoint: europe_missing
+external-endpoints:
+  - name: WebSocket
+    group: Europe
+    token: token
+`,
+			expectedErr: ErrInvalidSingleEndpoint,
+		},
+		{
+			name: "disabled-endpoint",
+			config: `
+ui:
+  single-endpoint: europe_websocket
+external-endpoints:
+  - name: WebSocket
+    group: Europe
+    enabled: false
+    token: token
+`,
+			expectedErr: ErrInvalidSingleEndpoint,
+		},
+		{
+			name: "suite-key",
+			config: `
+ui:
+  single-endpoint: europe_websocket
+suites:
+  - name: WebSocket
+    group: Europe
+    interval: 1m
+    endpoints:
+      - name: API
+        url: https://example.com
+        conditions:
+          - "[STATUS] == 200"
+`,
+			expectedErr: ErrInvalidSingleEndpoint,
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			cfg, err := parseAndValidateConfigBytes([]byte(test.config))
+			if !errors.Is(err, test.expectedErr) {
+				t.Fatalf("expected error %v, got %v", test.expectedErr, err)
+			}
+			if test.expectedErr == nil && cfg.UI.SingleEndpoint != test.expectedKey {
+				t.Errorf("expected single endpoint %q, got %q", test.expectedKey, cfg.UI.SingleEndpoint)
+			}
+		})
+	}
+}
+
 func TestGetAlertingProviderByAlertType(t *testing.T) {
 	alertingConfig := &alerting.Config{
 		AWSSimpleEmailService: &awsses.AlertProvider{},

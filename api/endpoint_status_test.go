@@ -1,6 +1,7 @@
 package api
 
 import (
+	"encoding/json"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -148,6 +149,20 @@ func TestEndpointStatus(t *testing.T) {
 				t.Errorf("%s %s should have returned %d, but returned %d instead", request.Method, request.URL, scenario.ExpectedCode, response.StatusCode)
 			}
 		})
+	}
+
+	request := httptest.NewRequest("GET", "/api/v1/endpoints/core_frontend/statuses?page=1&pageSize=20", http.NoBody)
+	response, err := router.Test(request)
+	if err != nil {
+		t.Fatal("expected endpoint status request to succeed, got", err)
+	}
+	defer response.Body.Close()
+	var status endpoint.Status
+	if err = json.NewDecoder(response.Body).Decode(&status); err != nil {
+		t.Fatal("expected endpoint status response to be valid JSON, got", err)
+	}
+	if status.ResultsCount != 1 {
+		t.Errorf("expected resultsCount to be 1, got %d", status.ResultsCount)
 	}
 }
 

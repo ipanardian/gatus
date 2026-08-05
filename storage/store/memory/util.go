@@ -15,6 +15,9 @@ func ShallowCopyEndpointStatus(ss *endpoint.Status, params *paging.EndpointStatu
 		Key:    ss.Key,
 		Uptime: endpoint.NewUptime(),
 	}
+	if params != nil && params.IncludeResultsCount {
+		shallowCopy.ResultsCount = len(ss.Results)
+	}
 	if params == nil || (params.ResultsPage == 0 && params.ResultsPageSize == 0 && params.EventsPage == 0 && params.EventsPageSize == 0) {
 		shallowCopy.Results = ss.Results
 		shallowCopy.Events = ss.Events

@@ -4,52 +4,62 @@ import (
 	"bytes"
 	"errors"
 	"html/template"
+	"strings"
 
 	"github.com/TwiN/gatus/v5/storage"
 	static "github.com/TwiN/gatus/v5/web"
 )
 
 const (
-	defaultTitle                = "Health Dashboard | Gatus"
-	defaultDescription          = "Gatus is an advanced automated status page that lets you monitor your applications and configure alerts to notify you if there's an issue"
-	defaultHeader               = "Gatus"
-	defaultDashboardHeading     = "Health Dashboard"
-	defaultDashboardSubheading  = "Monitor the health of your endpoints in real-time"
-	defaultLogo                 = ""
-	defaultLink                 = ""
-	defaultFavicon              = "/favicon.ico"
-	defaultFavicon16            = "/favicon-16x16.png"
-	defaultFavicon32            = "/favicon-32x32.png"
-	defaultCustomCSS            = ""
-	defaultSortBy               = "name"
-	defaultFilterBy             = "none"
-	defaultLoginSubtitle        = "System Monitoring Dashboard"
+	defaultTitle               = "Health Dashboard | Gatus"
+	defaultDescription         = "Gatus is an advanced automated status page that lets you monitor your applications and configure alerts to notify you if there's an issue"
+	defaultHeader              = "Gatus"
+	defaultDashboardHeading    = "Health Dashboard"
+	defaultDashboardSubheading = "Monitor the health of your endpoints in real-time"
+	defaultLogo                = ""
+	defaultLink                = ""
+	defaultFavicon             = "/favicon.ico"
+	defaultFavicon16           = "/favicon-16x16.png"
+	defaultFavicon32           = "/favicon-32x32.png"
+	defaultCustomCSS           = ""
+	defaultSortBy              = "name"
+	defaultFilterBy            = "none"
+	defaultLoginSubtitle       = "System Monitoring Dashboard"
 )
 
 var (
-	defaultDarkMode = true
+	defaultDarkMode                 = true
+	defaultSectionEnabled           = true
+	defaultResponseTimeBadgePeriods = []string{"30d", "7d", "24h", "1h"}
 
-	ErrButtonValidationFailed = errors.New("invalid button configuration: missing required name or link")
-	ErrInvalidDefaultSortBy   = errors.New("invalid default-sort-by value: must be 'name', 'group', or 'health'")
-	ErrInvalidDefaultFilterBy = errors.New("invalid default-filter-by value: must be 'none', 'failing', or 'unstable'")
+	ErrButtonValidationFailed         = errors.New("invalid button configuration: missing required name or link")
+	ErrInvalidDefaultSortBy           = errors.New("invalid default-sort-by value: must be 'name', 'group', or 'health'")
+	ErrInvalidDefaultFilterBy         = errors.New("invalid default-filter-by value: must be 'none', 'failing', or 'unstable'")
+	ErrInvalidResponseTimeBadgePeriod = errors.New("invalid response-time-badge-periods value: must contain only '30d', '7d', '24h', or '1h' without duplicates")
 )
 
 // Config is the configuration for the UI of Gatus
 type Config struct {
-	Title                   string   `yaml:"title,omitempty"`                  // Title of the page
-	Description             string   `yaml:"description,omitempty"`            // Meta description of the page
-	DashboardHeading        string   `yaml:"dashboard-heading,omitempty"`      // Dashboard Title between header and endpoints
-	DashboardSubheading     string   `yaml:"dashboard-subheading,omitempty"`   // Dashboard Description between header and endpoints
-	Header                  string   `yaml:"header,omitempty"`                 // Header is the text at the top of the page
-	Logo                    string   `yaml:"logo,omitempty"`                   // Logo to display on the page
-	Link                    string   `yaml:"link,omitempty"`                   // Link to open when clicking on the logo
-	Favicon                 Favicon  `yaml:"favicon,omitempty"`                // Favourite icon to display in web browser tab or address bar
-	Buttons                 []Button `yaml:"buttons,omitempty"`                // Buttons to display below the header
-	CustomCSS               string   `yaml:"custom-css,omitempty"`             // Custom CSS to include in the page
-	DarkMode                *bool    `yaml:"dark-mode,omitempty"`              // DarkMode is a flag to enable dark mode by default
-	DefaultSortBy           string   `yaml:"default-sort-by,omitempty"`        // DefaultSortBy is the default sort option ('name', 'group', 'health')
-	DefaultFilterBy         string   `yaml:"default-filter-by,omitempty"`      // DefaultFilterBy is the default filter option ('none', 'failing', 'unstable')
-	LoginSubtitle           string   `yaml:"login-subtitle,omitempty"`         // LoginSubtitle is the subtitle displayed on the OIDC login page
+	Title                    string   `yaml:"title,omitempty"`                       // Title of the page
+	Description              string   `yaml:"description,omitempty"`                 // Meta description of the page
+	DashboardHeading         string   `yaml:"dashboard-heading,omitempty"`           // Dashboard Title between header and endpoints
+	DashboardSubheading      string   `yaml:"dashboard-subheading,omitempty"`        // Dashboard Description between header and endpoints
+	Header                   string   `yaml:"header,omitempty"`                      // Header is the text at the top of the page
+	Logo                     string   `yaml:"logo,omitempty"`                        // Logo to display on the page
+	Link                     string   `yaml:"link,omitempty"`                        // Link to open when clicking on the logo
+	Favicon                  Favicon  `yaml:"favicon,omitempty"`                     // Favourite icon to display in web browser tab or address bar
+	Buttons                  []Button `yaml:"buttons,omitempty"`                     // Buttons to display below the header
+	CustomCSS                string   `yaml:"custom-css,omitempty"`                  // Custom CSS to include in the page
+	DarkMode                 *bool    `yaml:"dark-mode,omitempty"`                   // DarkMode is a flag to enable dark mode by default
+	DefaultSortBy            string   `yaml:"default-sort-by,omitempty"`             // DefaultSortBy is the default sort option ('name', 'group', 'health')
+	DefaultFilterBy          string   `yaml:"default-filter-by,omitempty"`           // DefaultFilterBy is the default filter option ('none', 'failing', 'unstable')
+	SingleEndpoint           string   `yaml:"single-endpoint,omitempty"`             // SingleEndpoint restricts the status page to one endpoint key
+	LoginSubtitle            string   `yaml:"login-subtitle,omitempty"`              // LoginSubtitle is the subtitle displayed on the OIDC login page
+	UptimeStatistics         *bool    `yaml:"uptime-statistics,omitempty"`           // UptimeStatistics controls whether uptime statistics are displayed on endpoint details pages
+	CurrentHealth            *bool    `yaml:"current-health,omitempty"`              // CurrentHealth controls whether the current health badge is displayed on endpoint details pages
+	ResponseTimeTrend        *bool    `yaml:"response-time-trend,omitempty"`         // ResponseTimeTrend controls whether the response time trend is displayed on endpoint details pages
+	Events                   *bool    `yaml:"events,omitempty"`                      // Events controls whether events are displayed on endpoint details pages
+	ResponseTimeBadgePeriods []string `yaml:"response-time-badge-periods,omitempty"` // ResponseTimeBadgePeriods controls which response time badges are displayed and in which order
 	//////////////////////////////////////////////
 	// Non-configurable - used for UI rendering //
 	//////////////////////////////////////////////
@@ -61,6 +71,30 @@ func (cfg *Config) IsDarkMode() bool {
 		return *cfg.DarkMode
 	}
 	return defaultDarkMode
+}
+
+func (cfg *Config) IsUptimeStatisticsEnabled() bool {
+	return cfg.UptimeStatistics == nil || *cfg.UptimeStatistics
+}
+
+func (cfg *Config) IsCurrentHealthEnabled() bool {
+	return cfg.CurrentHealth == nil || *cfg.CurrentHealth
+}
+
+func (cfg *Config) IsResponseTimeTrendEnabled() bool {
+	return cfg.ResponseTimeTrend == nil || *cfg.ResponseTimeTrend
+}
+
+func (cfg *Config) IsEventsEnabled() bool {
+	return cfg.Events == nil || *cfg.Events
+}
+
+func (cfg *Config) ResponseTimeBadgePeriodsCSV() string {
+	return strings.Join(cfg.ResponseTimeBadgePeriods, ",")
+}
+
+func boolPointer(value bool) *bool {
+	return &value
 }
 
 // Button is the configuration for a button on the UI
@@ -86,19 +120,24 @@ type Favicon struct {
 // GetDefaultConfig returns a Config struct with the default values
 func GetDefaultConfig() *Config {
 	return &Config{
-		Title:                  defaultTitle,
-		Description:            defaultDescription,
-		DashboardHeading:       defaultDashboardHeading,
-		DashboardSubheading:    defaultDashboardSubheading,
-		Header:                 defaultHeader,
-		Logo:                   defaultLogo,
-		Link:                   defaultLink,
-		CustomCSS:              defaultCustomCSS,
-		DarkMode:               &defaultDarkMode,
-		DefaultSortBy:          defaultSortBy,
-		DefaultFilterBy:        defaultFilterBy,
-		LoginSubtitle:          defaultLoginSubtitle,
-		MaximumNumberOfResults: storage.DefaultMaximumNumberOfResults,
+		Title:                    defaultTitle,
+		Description:              defaultDescription,
+		DashboardHeading:         defaultDashboardHeading,
+		DashboardSubheading:      defaultDashboardSubheading,
+		Header:                   defaultHeader,
+		Logo:                     defaultLogo,
+		Link:                     defaultLink,
+		CustomCSS:                defaultCustomCSS,
+		DarkMode:                 &defaultDarkMode,
+		DefaultSortBy:            defaultSortBy,
+		DefaultFilterBy:          defaultFilterBy,
+		LoginSubtitle:            defaultLoginSubtitle,
+		UptimeStatistics:         boolPointer(defaultSectionEnabled),
+		CurrentHealth:            boolPointer(defaultSectionEnabled),
+		ResponseTimeTrend:        boolPointer(defaultSectionEnabled),
+		Events:                   boolPointer(defaultSectionEnabled),
+		ResponseTimeBadgePeriods: append([]string(nil), defaultResponseTimeBadgePeriods...),
+		MaximumNumberOfResults:   storage.DefaultMaximumNumberOfResults,
 		Favicon: Favicon{
 			Default:   defaultFavicon,
 			Size16x16: defaultFavicon16,
@@ -148,6 +187,31 @@ func (cfg *Config) ValidateAndSetDefaults() error {
 	}
 	if len(cfg.LoginSubtitle) == 0 {
 		cfg.LoginSubtitle = defaultLoginSubtitle
+	}
+	if cfg.UptimeStatistics == nil {
+		cfg.UptimeStatistics = boolPointer(defaultSectionEnabled)
+	}
+	if cfg.CurrentHealth == nil {
+		cfg.CurrentHealth = boolPointer(defaultSectionEnabled)
+	}
+	if cfg.ResponseTimeTrend == nil {
+		cfg.ResponseTimeTrend = boolPointer(defaultSectionEnabled)
+	}
+	if cfg.Events == nil {
+		cfg.Events = boolPointer(defaultSectionEnabled)
+	}
+	if cfg.ResponseTimeBadgePeriods == nil {
+		cfg.ResponseTimeBadgePeriods = append([]string(nil), defaultResponseTimeBadgePeriods...)
+	}
+	seenResponseTimeBadgePeriods := make(map[string]struct{}, len(cfg.ResponseTimeBadgePeriods))
+	for _, period := range cfg.ResponseTimeBadgePeriods {
+		if period != "30d" && period != "7d" && period != "24h" && period != "1h" {
+			return ErrInvalidResponseTimeBadgePeriod
+		}
+		if _, exists := seenResponseTimeBadgePeriods[period]; exists {
+			return ErrInvalidResponseTimeBadgePeriod
+		}
+		seenResponseTimeBadgePeriods[period] = struct{}{}
 	}
 	if len(cfg.Favicon.Default) == 0 {
 		cfg.Favicon.Default = defaultFavicon
