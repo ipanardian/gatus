@@ -1,12 +1,12 @@
 BINARY=gatus
 
-TAG=latest
+TAG ?=
 IMAGE ?= gatus-nobi:$(TAG)
 CONTAINER ?= gatus
 HOST_PORT ?= 8080
 CONFIG_FILE ?= ./config.yaml
-DATA_DIR ?= ./data
-PRODUCTION_ENVIRONMENT ?= production
+ENV_FILE ?= ./.env
+COMPOSE_FILE ?= ./docker-compose.yml
 
 .PHONY: help
 help:
@@ -56,29 +56,29 @@ test:
 # Production deployment #
 #########################
 
-.PHONY: production-check production-build build-deploy deploy restart start stop status logs
-production-check:
-	@test -f "$(CURDIR)/Dockerfile" || { echo "Missing $(CURDIR)/Dockerfile"; exit 1; }
-	@test -f "$(CONFIG_FILE)" || { echo "Missing $(CONFIG_FILE)"; exit 1; }
+.PHONY: tag-check production-build-check deploy-check production-build build-deploy deploy restart start stop status logs
+tag-check:
+	@test -n "$(TAG)" || { echo "Missing TAG; use TAG=<image-tag>"; exit 1; }
 
-production-build: production-check
+production-build-check: tag-check
+	@test -f "$(CURDIR)/Dockerfile" || { echo "Missing $(CURDIR)/Dockerfile"; exit 1; }
+
+deploy-check: tag-check
+	@test -f "$(COMPOSE_FILE)" || { echo "Missing $(COMPOSE_FILE)"; exit 1; }
+	@test -f "$(CONFIG_FILE)" || { echo "Missing $(CONFIG_FILE)"; exit 1; }
+	@test -f "$(ENV_FILE)" || { echo "Missing $(ENV_FILE); copy .env.example to .env"; exit 1; }
+
+production-build: production-build-check
 	docker build -t "$(IMAGE)" "$(CURDIR)"
 
 build-deploy: production-build
 	$(MAKE) deploy
 
-deploy: production-check
-	@mkdir -p "$(DATA_DIR)"
-	@docker rm -f "$(CONTAINER)" >/dev/null 2>&1 || true
-	docker run -d \
-		--restart=unless-stopped \
-		--network ip4net \
-		-e ENVIRONMENT="$(PRODUCTION_ENVIRONMENT)" \
-		-p "$(HOST_PORT):8080" \
-		-v "$(CONFIG_FILE):/config/config.yaml:ro" \
-		-v "$(DATA_DIR):/data" \
-		--name "$(CONTAINER)" \
-		"$(IMAGE)"
+deploy: deploy-check
+	TAG="$(TAG)" \
+	GATUS_PORT="$(HOST_PORT)" \
+	GATUS_CONFIG_FILE="$(CONFIG_FILE)" \
+	docker compose --env-file "$(ENV_FILE)" -f "$(COMPOSE_FILE)" up -d --no-build gatus
 
 restart:
 	docker restart "$(CONTAINER)"

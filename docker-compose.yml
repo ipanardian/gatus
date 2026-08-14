@@ -1,0 +1,23 @@
+name: gatus-app
+
+services:
+  gatus:
+    image: gatus-nobi:${TAG:?Set TAG explicitly}
+    pull_policy: never
+    container_name: gatus
+    restart: unless-stopped
+    ports:
+      - "${GATUS_PORT:-8080}:8080"
+    environment:
+      GATUS_CONFIG_PATH: /config/config.yaml
+      POSTGRES_DB: "${POSTGRES_DB:-gatus}"
+      POSTGRES_USER: "${POSTGRES_USER:-gatus}"
+      POSTGRES_PASSWORD: "${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}"
+    volumes:
+      - "${GATUS_CONFIG_FILE:-./config.yaml}:/config/config.yaml:ro"
+    networks:
+      - ip4net
+
+networks:
+  ip4net:
+    external: true
