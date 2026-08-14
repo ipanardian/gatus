@@ -64,6 +64,9 @@ func checkHourlyStatistics(t *testing.T, hourlyUptimeStatistics *endpoint.Hourly
 	if hourlyUptimeStatistics.TotalExecutionsResponseTime != expectedTotalExecutionsResponseTime {
 		t.Error("TotalExecutionsResponseTime should've been", expectedTotalExecutionsResponseTime, "got", hourlyUptimeStatistics.TotalExecutionsResponseTime)
 	}
+	if hourlyUptimeStatistics.ResponseTimeExecutions != expectedTotalExecutions {
+		t.Error("ResponseTimeExecutions should've been", expectedTotalExecutions, "got", hourlyUptimeStatistics.ResponseTimeExecutions)
+	}
 	if hourlyUptimeStatistics.TotalExecutions != expectedTotalExecutions {
 		t.Error("TotalExecutions should've been", expectedTotalExecutions, "got", hourlyUptimeStatistics.TotalExecutions)
 	}

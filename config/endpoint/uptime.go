@@ -14,6 +14,7 @@ type HourlyUptimeStatistics struct {
 	TotalExecutions             uint64 // Total number of checks
 	SuccessfulExecutions        uint64 // Number of successful executions
 	TotalExecutionsResponseTime uint64 // Total response time for all executions in milliseconds
+	ResponseTimeExecutions      uint64 // Number of executions included in response-time statistics
 }
 
 // NewUptime creates a new Uptime

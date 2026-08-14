@@ -133,6 +133,30 @@ func (s *Store) GetUptimeByKey(key string, from, to time.Time) (float64, error) 
 	return float64(successfulExecutions) / float64(totalExecutions), nil
 }
 
+func (s *Store) GetResponseTimeSuccessRateByKey(key string, from, to time.Time) (float64, error) {
+	if from.After(to) {
+		return 0, common.ErrInvalidTimeRange
+	}
+	s.RLock()
+	defer s.RUnlock()
+	status := s.endpointCache.GetValue(key)
+	if status == nil || status.(*endpoint.Status).Uptime == nil {
+		return 0, common.ErrEndpointNotFound
+	}
+	var total, successful uint64
+	for current := from; !current.After(to); current = current.Add(time.Hour) {
+		stats := status.(*endpoint.Status).Uptime.HourlyStatistics[current.Truncate(time.Hour).Unix()]
+		if stats != nil {
+			total += stats.TotalExecutions
+			successful += stats.ResponseTimeExecutions
+		}
+	}
+	if total == 0 {
+		return 0, nil
+	}
+	return float64(successful) / float64(total), nil
+}
+
 // GetAverageResponseTimeByKey returns the average response time in milliseconds (value) during a time range
 func (s *Store) GetAverageResponseTimeByKey(key string, from, to time.Time) (int, error) {
 	if from.After(to) {
@@ -149,11 +173,11 @@ func (s *Store) GetAverageResponseTimeByKey(key string, from, to time.Time) (int
 	for to.Sub(current) >= 0 {
 		hourlyUnixTimestamp := current.Truncate(time.Hour).Unix()
 		hourlyStats := endpointStatus.(*endpoint.Status).Uptime.HourlyStatistics[hourlyUnixTimestamp]
-		if hourlyStats == nil || hourlyStats.TotalExecutions == 0 {
+		if hourlyStats == nil || hourlyStats.ResponseTimeExecutions == 0 {
 			current = current.Add(time.Hour)
 			continue
 		}
-		totalExecutions += hourlyStats.TotalExecutions
+		totalExecutions += hourlyStats.ResponseTimeExecutions
 		totalResponseTime += hourlyStats.TotalExecutionsResponseTime
 		current = current.Add(time.Hour)
 	}
@@ -179,11 +203,11 @@ func (s *Store) GetHourlyAverageResponseTimeByKey(key string, from, to time.Time
 	for to.Sub(current) >= 0 {
 		hourlyUnixTimestamp := current.Truncate(time.Hour).Unix()
 		hourlyStats := endpointStatus.(*endpoint.Status).Uptime.HourlyStatistics[hourlyUnixTimestamp]
-		if hourlyStats == nil || hourlyStats.TotalExecutions == 0 {
+		if hourlyStats == nil || hourlyStats.ResponseTimeExecutions == 0 {
 			current = current.Add(time.Hour)
 			continue
 		}
-		hourlyAverageResponseTimes[hourlyUnixTimestamp] = int(float64(hourlyStats.TotalExecutionsResponseTime) / float64(hourlyStats.TotalExecutions))
+		hourlyAverageResponseTimes[hourlyUnixTimestamp] = int(float64(hourlyStats.TotalExecutionsResponseTime) / float64(hourlyStats.ResponseTimeExecutions))
 		current = current.Add(time.Hour)
 	}
 	return hourlyAverageResponseTimes, nil

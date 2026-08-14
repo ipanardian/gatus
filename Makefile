@@ -37,11 +37,11 @@ install:
 
 .PHONY: run
 run:
-	ENVIRONMENT=dev GATUS_CONFIG_PATH=./config.yaml go run main.go
+	ENVIRONMENT=dev GATUS_CONFIG_PATH=$(CONFIG_FILE) go run main.go
 
 .PHONY: run-binary
 run-binary:
-	ENVIRONMENT=dev GATUS_CONFIG_PATH=./config.yaml ./$(BINARY)
+	ENVIRONMENT=dev GATUS_CONFIG_PATH=$(CONFIG_FILE) ./$(BINARY)
 
 .PHONY: clean
 clean:

@@ -27,6 +27,10 @@ type Result struct {
 	// Duration time that the request took
 	Duration time.Duration `json:"duration"`
 
+	// IgnoreResponseTime prevents this result from contributing to response-time statistics.
+	// It is set only for external endpoint submissions using rt_success=false.
+	IgnoreResponseTime bool `json:"-"`
+
 	// Errors encountered during the evaluation of the Endpoint's health
 	Errors []string `json:"errors,omitempty"`
 

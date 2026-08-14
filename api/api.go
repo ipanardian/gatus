@@ -84,6 +84,7 @@ func (a *API) createRouter(cfg *config.Config) *fiber.App {
 	unprotectedAPIRouter.Get("/v1/endpoints/:key/uptimes/:duration/badge.svg", singleEndpointRestriction, UptimeBadge)
 	unprotectedAPIRouter.Get("/v1/endpoints/:key/response-times/:duration", singleEndpointRestriction, ResponseTimeRaw)
 	unprotectedAPIRouter.Get("/v1/endpoints/:key/response-times/:duration/badge.svg", singleEndpointRestriction, ResponseTimeBadge(cfg))
+	unprotectedAPIRouter.Get("/v1/endpoints/:key/response-statistics/:duration/badge.svg", singleEndpointRestriction, ResponseTimeStatisticsBadge)
 	unprotectedAPIRouter.Get("/v1/endpoints/:key/response-times/:duration/chart.svg", singleEndpointRestriction, ResponseTimeChart)
 	unprotectedAPIRouter.Get("/v1/endpoints/:key/response-times/:duration/history", singleEndpointRestriction, ResponseTimeHistory)
 	// This endpoint requires authz with bearer token, so technically it is protected

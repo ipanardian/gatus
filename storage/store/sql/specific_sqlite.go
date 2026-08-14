@@ -91,6 +91,7 @@ func (s *Store) createSQLiteSchema() error {
 			total_executions      INTEGER NOT NULL,
 			successful_executions INTEGER NOT NULL,
 			total_response_time   INTEGER NOT NULL,
+			response_time_executions INTEGER NOT NULL DEFAULT 0,
 			UNIQUE(endpoint_id, hour_unix_timestamp)
 		)
 	`)
@@ -140,6 +141,9 @@ func (s *Store) createSQLiteSchema() error {
 	_, _ = s.db.Exec(`ALTER TABLE endpoint_results ADD domain_expiration INTEGER NOT NULL DEFAULT 0`)
 	// Add suite_result_id to endpoint_results table for suite endpoint linkage
 	_, _ = s.db.Exec(`ALTER TABLE endpoint_results ADD suite_result_id INTEGER REFERENCES suite_results(suite_result_id) ON DELETE CASCADE`)
+	if _, err := s.db.Exec(`ALTER TABLE endpoint_uptimes ADD response_time_executions INTEGER NOT NULL DEFAULT 0`); err == nil {
+		_, _ = s.db.Exec(`UPDATE endpoint_uptimes SET response_time_executions = total_executions`)
+	}
 	// Create index for suite_result_id
 	_, _ = s.db.Exec(`CREATE INDEX IF NOT EXISTS endpoint_results_suite_result_id_idx ON endpoint_results(suite_result_id)`)
 	// Note: SQLite doesn't support DROP COLUMN in older versions, so we skip this cleanup

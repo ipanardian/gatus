@@ -185,6 +185,34 @@ func (s *Store) GetUptimeByKey(key string, from, to time.Time) (float64, error) 
 	return uptime, nil
 }
 
+func (s *Store) GetResponseTimeSuccessRateByKey(key string, from, to time.Time) (float64, error) {
+	if from.After(to) {
+		return 0, common.ErrInvalidTimeRange
+	}
+	tx, err := s.db.Begin()
+	if err != nil {
+		return 0, err
+	}
+	endpointID, _, _, err := s.getEndpointIDGroupAndNameByKey(tx, key)
+	if err != nil {
+		_ = tx.Rollback()
+		return 0, err
+	}
+	var total, successful int
+	err = tx.QueryRow(`SELECT COALESCE(SUM(total_executions), 0), COALESCE(SUM(response_time_executions), 0) FROM endpoint_uptimes WHERE endpoint_id = $1 AND hour_unix_timestamp >= $2 AND hour_unix_timestamp <= $3`, endpointID, from.Unix(), to.Unix()).Scan(&total, &successful)
+	if err != nil {
+		_ = tx.Rollback()
+		return 0, err
+	}
+	if err = tx.Commit(); err != nil {
+		return 0, err
+	}
+	if total == 0 {
+		return 0, nil
+	}
+	return float64(successful) / float64(total), nil
+}
+
 // GetAverageResponseTimeByKey returns the average response time in milliseconds (value) during a time range
 func (s *Store) GetAverageResponseTimeByKey(key string, from, to time.Time) (int, error) {
 	if from.After(to) {
@@ -668,20 +696,28 @@ func (s *Store) updateEndpointUptime(tx *sql.Tx, endpointID int64, result *endpo
 	if result.Success {
 		successfulExecutions = 1
 	}
+	responseTimeExecutions := 1
+	responseTime := result.Duration.Milliseconds()
+	if result.IgnoreResponseTime {
+		responseTimeExecutions = 0
+		responseTime = 0
+	}
 	_, err := tx.Exec(
 		`
-			INSERT INTO endpoint_uptimes (endpoint_id, hour_unix_timestamp, total_executions, successful_executions, total_response_time) 
-			VALUES ($1, $2, $3, $4, $5)
+			INSERT INTO endpoint_uptimes (endpoint_id, hour_unix_timestamp, total_executions, successful_executions, total_response_time, response_time_executions)
+			VALUES ($1, $2, $3, $4, $5, $6)
 			ON CONFLICT(endpoint_id, hour_unix_timestamp) DO UPDATE SET
 				total_executions = excluded.total_executions + endpoint_uptimes.total_executions,
 				successful_executions = excluded.successful_executions + endpoint_uptimes.successful_executions,
-				total_response_time = excluded.total_response_time + endpoint_uptimes.total_response_time
+				total_response_time = excluded.total_response_time + endpoint_uptimes.total_response_time,
+				response_time_executions = excluded.response_time_executions + endpoint_uptimes.response_time_executions
 		`,
 		endpointID,
 		unixTimestampFlooredAtHour,
 		1,
 		successfulExecutions,
-		result.Duration.Milliseconds(),
+		responseTime,
+		responseTimeExecutions,
 	)
 	return err
 }
@@ -891,10 +927,10 @@ func (s *Store) getEndpointUptime(tx *sql.Tx, endpointID int64, from, to time.Ti
 func (s *Store) getEndpointAverageResponseTime(tx *sql.Tx, endpointID int64, from, to time.Time) (int, error) {
 	rows, err := tx.Query(
 		`
-			SELECT SUM(total_executions), SUM(total_response_time)
+			SELECT SUM(response_time_executions), SUM(total_response_time)
 			FROM endpoint_uptimes
 			WHERE endpoint_id = $1
-				AND total_executions > 0
+				AND response_time_executions > 0
 				AND hour_unix_timestamp >= $2
 				AND hour_unix_timestamp <= $3
 		`,
@@ -918,10 +954,10 @@ func (s *Store) getEndpointAverageResponseTime(tx *sql.Tx, endpointID int64, fro
 func (s *Store) getEndpointHourlyAverageResponseTimes(tx *sql.Tx, endpointID int64, from, to time.Time) (map[int64]int, error) {
 	rows, err := tx.Query(
 		`
-			SELECT hour_unix_timestamp, total_executions, total_response_time
+			SELECT hour_unix_timestamp, response_time_executions, total_response_time
 			FROM endpoint_uptimes
 			WHERE endpoint_id = $1
-				AND total_executions > 0
+				AND response_time_executions > 0
 				AND hour_unix_timestamp >= $2
 				AND hour_unix_timestamp <= $3
 		`,
@@ -1076,7 +1112,7 @@ func (s *Store) mergeHourlyUptimeEntriesOlderThanMergeThresholdIntoDailyUptimeEn
 	// Get all uptime entries older than uptimeHourlyMergeThreshold
 	rows, err := tx.Query(
 		`
-			SELECT hour_unix_timestamp, total_executions, successful_executions, total_response_time
+			SELECT hour_unix_timestamp, total_executions, successful_executions, total_response_time, response_time_executions
 			FROM endpoint_uptimes
 			WHERE endpoint_id = $1
 				AND hour_unix_timestamp < $2
@@ -1090,15 +1126,16 @@ func (s *Store) mergeHourlyUptimeEntriesOlderThanMergeThresholdIntoDailyUptimeEn
 		return err
 	}
 	type Entry struct {
-		totalExecutions      int
-		successfulExecutions int
-		totalResponseTime    int
+		totalExecutions        int
+		successfulExecutions   int
+		totalResponseTime      int
+		responseTimeExecutions int
 	}
 	dailyEntries := make(map[int64]*Entry)
 	for rows.Next() {
 		var unixTimestamp int64
 		entry := Entry{}
-		if err = rows.Scan(&unixTimestamp, &entry.totalExecutions, &entry.successfulExecutions, &entry.totalResponseTime); err != nil {
+		if err = rows.Scan(&unixTimestamp, &entry.totalExecutions, &entry.successfulExecutions, &entry.totalResponseTime, &entry.responseTimeExecutions); err != nil {
 			return err
 		}
 		timestamp := time.Unix(unixTimestamp, 0)
@@ -1109,6 +1146,7 @@ func (s *Store) mergeHourlyUptimeEntriesOlderThanMergeThresholdIntoDailyUptimeEn
 			dailyEntries[unixTimestampFlooredAtDay].totalExecutions += entry.totalExecutions
 			dailyEntries[unixTimestampFlooredAtDay].successfulExecutions += entry.successfulExecutions
 			dailyEntries[unixTimestampFlooredAtDay].totalResponseTime += entry.totalResponseTime
+			dailyEntries[unixTimestampFlooredAtDay].responseTimeExecutions += entry.responseTimeExecutions
 		}
 	}
 	// Delete older hourly uptime entries
@@ -1120,18 +1158,20 @@ func (s *Store) mergeHourlyUptimeEntriesOlderThanMergeThresholdIntoDailyUptimeEn
 	for unixTimestamp, entry := range dailyEntries {
 		_, err = tx.Exec(
 			`
-					INSERT INTO endpoint_uptimes (endpoint_id, hour_unix_timestamp, total_executions, successful_executions, total_response_time)
-					VALUES ($1, $2, $3, $4, $5)
+					INSERT INTO endpoint_uptimes (endpoint_id, hour_unix_timestamp, total_executions, successful_executions, total_response_time, response_time_executions)
+					VALUES ($1, $2, $3, $4, $5, $6)
 					ON CONFLICT(endpoint_id, hour_unix_timestamp) DO UPDATE SET
 						total_executions = $3,
 						successful_executions = $4,
-						total_response_time = $5
+						total_response_time = $5,
+						response_time_executions = $6
 				`,
 			endpointID,
 			unixTimestamp,
 			entry.totalExecutions,
 			entry.successfulExecutions,
 			entry.totalResponseTime,
+			entry.responseTimeExecutions,
 		)
 		if err != nil {
 			return err

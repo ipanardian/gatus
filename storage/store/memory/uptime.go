@@ -27,7 +27,10 @@ func processUptimeAfterResult(uptime *endpoint.Uptime, result *endpoint.Result) 
 		hourlyStats.SuccessfulExecutions++
 	}
 	hourlyStats.TotalExecutions++
-	hourlyStats.TotalExecutionsResponseTime += uint64(result.Duration.Milliseconds())
+	if !result.IgnoreResponseTime {
+		hourlyStats.TotalExecutionsResponseTime += uint64(result.Duration.Milliseconds())
+		hourlyStats.ResponseTimeExecutions++
+	}
 	// Clean up only when we're starting to have too many useless keys
 	// Note that this is only triggered when there are more entries than there should be after
 	// 32 days, despite the fact that we are deleting everything that's older than 30 days.

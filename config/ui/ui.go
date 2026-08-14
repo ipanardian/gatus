@@ -28,38 +28,42 @@ const (
 )
 
 var (
-	defaultDarkMode                 = true
-	defaultSectionEnabled           = true
-	defaultResponseTimeBadgePeriods = []string{"30d", "7d", "24h", "1h"}
+	defaultDarkMode                      = true
+	defaultSectionEnabled                = true
+	defaultResponseTimeStatisticsPeriods = []string{"30d", "7d", "24h", "1h"}
+	defaultUptimeStatisticsPeriods       = []string{"30d", "7d", "24h", "1h"}
 
-	ErrButtonValidationFailed         = errors.New("invalid button configuration: missing required name or link")
-	ErrInvalidDefaultSortBy           = errors.New("invalid default-sort-by value: must be 'name', 'group', or 'health'")
-	ErrInvalidDefaultFilterBy         = errors.New("invalid default-filter-by value: must be 'none', 'failing', or 'unstable'")
-	ErrInvalidResponseTimeBadgePeriod = errors.New("invalid response-time-badge-periods value: must contain only '30d', '7d', '24h', or '1h' without duplicates")
+	ErrButtonValidationFailed              = errors.New("invalid button configuration: missing required name or link")
+	ErrInvalidDefaultSortBy                = errors.New("invalid default-sort-by value: must be 'name', 'group', or 'health'")
+	ErrInvalidDefaultFilterBy              = errors.New("invalid default-filter-by value: must be 'none', 'failing', or 'unstable'")
+	ErrInvalidResponseTimeStatisticsPeriod = errors.New("invalid response-time-statistics-periods value: must contain only '30d', '7d', '24h', or '1h' without duplicates")
+	ErrInvalidUptimeStatisticsPeriod       = errors.New("invalid uptime-statistics-periods value: must contain only '30d', '7d', '24h', or '1h' without duplicates")
 )
 
 // Config is the configuration for the UI of Gatus
 type Config struct {
-	Title                    string   `yaml:"title,omitempty"`                       // Title of the page
-	Description              string   `yaml:"description,omitempty"`                 // Meta description of the page
-	DashboardHeading         string   `yaml:"dashboard-heading,omitempty"`           // Dashboard Title between header and endpoints
-	DashboardSubheading      string   `yaml:"dashboard-subheading,omitempty"`        // Dashboard Description between header and endpoints
-	Header                   string   `yaml:"header,omitempty"`                      // Header is the text at the top of the page
-	Logo                     string   `yaml:"logo,omitempty"`                        // Logo to display on the page
-	Link                     string   `yaml:"link,omitempty"`                        // Link to open when clicking on the logo
-	Favicon                  Favicon  `yaml:"favicon,omitempty"`                     // Favourite icon to display in web browser tab or address bar
-	Buttons                  []Button `yaml:"buttons,omitempty"`                     // Buttons to display below the header
-	CustomCSS                string   `yaml:"custom-css,omitempty"`                  // Custom CSS to include in the page
-	DarkMode                 *bool    `yaml:"dark-mode,omitempty"`                   // DarkMode is a flag to enable dark mode by default
-	DefaultSortBy            string   `yaml:"default-sort-by,omitempty"`             // DefaultSortBy is the default sort option ('name', 'group', 'health')
-	DefaultFilterBy          string   `yaml:"default-filter-by,omitempty"`           // DefaultFilterBy is the default filter option ('none', 'failing', 'unstable')
-	SingleEndpoint           string   `yaml:"single-endpoint,omitempty"`             // SingleEndpoint restricts the status page to one endpoint key
-	LoginSubtitle            string   `yaml:"login-subtitle,omitempty"`              // LoginSubtitle is the subtitle displayed on the OIDC login page
-	UptimeStatistics         *bool    `yaml:"uptime-statistics,omitempty"`           // UptimeStatistics controls whether uptime statistics are displayed on endpoint details pages
-	CurrentHealth            *bool    `yaml:"current-health,omitempty"`              // CurrentHealth controls whether the current health badge is displayed on endpoint details pages
-	ResponseTimeTrend        *bool    `yaml:"response-time-trend,omitempty"`         // ResponseTimeTrend controls whether the response time trend is displayed on endpoint details pages
-	Events                   *bool    `yaml:"events,omitempty"`                      // Events controls whether events are displayed on endpoint details pages
-	ResponseTimeBadgePeriods []string `yaml:"response-time-badge-periods,omitempty"` // ResponseTimeBadgePeriods controls which response time badges are displayed and in which order
+	Title                         string   `yaml:"title,omitempty"`                            // Title of the page
+	Description                   string   `yaml:"description,omitempty"`                      // Meta description of the page
+	DashboardHeading              string   `yaml:"dashboard-heading,omitempty"`                // Dashboard Title between header and endpoints
+	DashboardSubheading           string   `yaml:"dashboard-subheading,omitempty"`             // Dashboard Description between header and endpoints
+	Header                        string   `yaml:"header,omitempty"`                           // Header is the text at the top of the page
+	Logo                          string   `yaml:"logo,omitempty"`                             // Logo to display on the page
+	Link                          string   `yaml:"link,omitempty"`                             // Link to open when clicking on the logo
+	Favicon                       Favicon  `yaml:"favicon,omitempty"`                          // Favourite icon to display in web browser tab or address bar
+	Buttons                       []Button `yaml:"buttons,omitempty"`                          // Buttons to display below the header
+	CustomCSS                     string   `yaml:"custom-css,omitempty"`                       // Custom CSS to include in the page
+	DarkMode                      *bool    `yaml:"dark-mode,omitempty"`                        // DarkMode is a flag to enable dark mode by default
+	DefaultSortBy                 string   `yaml:"default-sort-by,omitempty"`                  // DefaultSortBy is the default sort option ('name', 'group', 'health')
+	DefaultFilterBy               string   `yaml:"default-filter-by,omitempty"`                // DefaultFilterBy is the default filter option ('none', 'failing', 'unstable')
+	SingleEndpoint                string   `yaml:"single-endpoint,omitempty"`                  // SingleEndpoint restricts the status page to one endpoint key
+	LoginSubtitle                 string   `yaml:"login-subtitle,omitempty"`                   // LoginSubtitle is the subtitle displayed on the OIDC login page
+	UptimeStatistics              *bool    `yaml:"uptime-statistics,omitempty"`                // UptimeStatistics controls whether uptime statistics are displayed on endpoint details pages
+	ResponseTimeStatistics        *bool    `yaml:"response-time-statistics,omitempty"`         // ResponseTimeStatistics controls whether response-time statistics are displayed on endpoint details pages
+	CurrentHealth                 *bool    `yaml:"current-health,omitempty"`                   // CurrentHealth controls whether the current health badge is displayed on endpoint details pages
+	ResponseTimeTrend             *bool    `yaml:"response-time-trend,omitempty"`              // ResponseTimeTrend controls whether the response time trend is displayed on endpoint details pages
+	Events                        *bool    `yaml:"events,omitempty"`                           // Events controls whether events are displayed on endpoint details pages
+	ResponseTimeStatisticsPeriods []string `yaml:"response-time-statistics-periods,omitempty"` // ResponseTimeStatisticsPeriods controls which response-time statistics are displayed and in which order
+	UptimeStatisticsPeriods       []string `yaml:"uptime-statistics-periods,omitempty"`        // UptimeStatisticsPeriods controls which uptime statistics are displayed and in which order
 	//////////////////////////////////////////////
 	// Non-configurable - used for UI rendering //
 	//////////////////////////////////////////////
@@ -77,6 +81,10 @@ func (cfg *Config) IsUptimeStatisticsEnabled() bool {
 	return cfg.UptimeStatistics == nil || *cfg.UptimeStatistics
 }
 
+func (cfg *Config) IsResponseTimeStatisticsEnabled() bool {
+	return cfg.ResponseTimeStatistics == nil || *cfg.ResponseTimeStatistics
+}
+
 func (cfg *Config) IsCurrentHealthEnabled() bool {
 	return cfg.CurrentHealth == nil || *cfg.CurrentHealth
 }
@@ -89,8 +97,12 @@ func (cfg *Config) IsEventsEnabled() bool {
 	return cfg.Events == nil || *cfg.Events
 }
 
-func (cfg *Config) ResponseTimeBadgePeriodsCSV() string {
-	return strings.Join(cfg.ResponseTimeBadgePeriods, ",")
+func (cfg *Config) ResponseTimeStatisticsPeriodsCSV() string {
+	return strings.Join(cfg.ResponseTimeStatisticsPeriods, ",")
+}
+
+func (cfg *Config) UptimeStatisticsPeriodsCSV() string {
+	return strings.Join(cfg.UptimeStatisticsPeriods, ",")
 }
 
 func boolPointer(value bool) *bool {
@@ -120,24 +132,26 @@ type Favicon struct {
 // GetDefaultConfig returns a Config struct with the default values
 func GetDefaultConfig() *Config {
 	return &Config{
-		Title:                    defaultTitle,
-		Description:              defaultDescription,
-		DashboardHeading:         defaultDashboardHeading,
-		DashboardSubheading:      defaultDashboardSubheading,
-		Header:                   defaultHeader,
-		Logo:                     defaultLogo,
-		Link:                     defaultLink,
-		CustomCSS:                defaultCustomCSS,
-		DarkMode:                 &defaultDarkMode,
-		DefaultSortBy:            defaultSortBy,
-		DefaultFilterBy:          defaultFilterBy,
-		LoginSubtitle:            defaultLoginSubtitle,
-		UptimeStatistics:         boolPointer(defaultSectionEnabled),
-		CurrentHealth:            boolPointer(defaultSectionEnabled),
-		ResponseTimeTrend:        boolPointer(defaultSectionEnabled),
-		Events:                   boolPointer(defaultSectionEnabled),
-		ResponseTimeBadgePeriods: append([]string(nil), defaultResponseTimeBadgePeriods...),
-		MaximumNumberOfResults:   storage.DefaultMaximumNumberOfResults,
+		Title:                         defaultTitle,
+		Description:                   defaultDescription,
+		DashboardHeading:              defaultDashboardHeading,
+		DashboardSubheading:           defaultDashboardSubheading,
+		Header:                        defaultHeader,
+		Logo:                          defaultLogo,
+		Link:                          defaultLink,
+		CustomCSS:                     defaultCustomCSS,
+		DarkMode:                      &defaultDarkMode,
+		DefaultSortBy:                 defaultSortBy,
+		DefaultFilterBy:               defaultFilterBy,
+		LoginSubtitle:                 defaultLoginSubtitle,
+		UptimeStatistics:              boolPointer(defaultSectionEnabled),
+		ResponseTimeStatistics:        boolPointer(defaultSectionEnabled),
+		CurrentHealth:                 boolPointer(defaultSectionEnabled),
+		ResponseTimeTrend:             boolPointer(defaultSectionEnabled),
+		Events:                        boolPointer(defaultSectionEnabled),
+		ResponseTimeStatisticsPeriods: append([]string(nil), defaultResponseTimeStatisticsPeriods...),
+		UptimeStatisticsPeriods:       append([]string(nil), defaultUptimeStatisticsPeriods...),
+		MaximumNumberOfResults:        storage.DefaultMaximumNumberOfResults,
 		Favicon: Favicon{
 			Default:   defaultFavicon,
 			Size16x16: defaultFavicon16,
@@ -191,6 +205,9 @@ func (cfg *Config) ValidateAndSetDefaults() error {
 	if cfg.UptimeStatistics == nil {
 		cfg.UptimeStatistics = boolPointer(defaultSectionEnabled)
 	}
+	if cfg.ResponseTimeStatistics == nil {
+		cfg.ResponseTimeStatistics = boolPointer(defaultSectionEnabled)
+	}
 	if cfg.CurrentHealth == nil {
 		cfg.CurrentHealth = boolPointer(defaultSectionEnabled)
 	}
@@ -200,18 +217,17 @@ func (cfg *Config) ValidateAndSetDefaults() error {
 	if cfg.Events == nil {
 		cfg.Events = boolPointer(defaultSectionEnabled)
 	}
-	if cfg.ResponseTimeBadgePeriods == nil {
-		cfg.ResponseTimeBadgePeriods = append([]string(nil), defaultResponseTimeBadgePeriods...)
+	if cfg.ResponseTimeStatisticsPeriods == nil {
+		cfg.ResponseTimeStatisticsPeriods = append([]string(nil), defaultResponseTimeStatisticsPeriods...)
 	}
-	seenResponseTimeBadgePeriods := make(map[string]struct{}, len(cfg.ResponseTimeBadgePeriods))
-	for _, period := range cfg.ResponseTimeBadgePeriods {
-		if period != "30d" && period != "7d" && period != "24h" && period != "1h" {
-			return ErrInvalidResponseTimeBadgePeriod
-		}
-		if _, exists := seenResponseTimeBadgePeriods[period]; exists {
-			return ErrInvalidResponseTimeBadgePeriod
-		}
-		seenResponseTimeBadgePeriods[period] = struct{}{}
+	if err := validatePeriods(cfg.ResponseTimeStatisticsPeriods, ErrInvalidResponseTimeStatisticsPeriod); err != nil {
+		return err
+	}
+	if cfg.UptimeStatisticsPeriods == nil {
+		cfg.UptimeStatisticsPeriods = append([]string(nil), defaultUptimeStatisticsPeriods...)
+	}
+	if err := validatePeriods(cfg.UptimeStatisticsPeriods, ErrInvalidUptimeStatisticsPeriod); err != nil {
+		return err
 	}
 	if len(cfg.Favicon.Default) == 0 {
 		cfg.Favicon.Default = defaultFavicon
@@ -234,6 +250,20 @@ func (cfg *Config) ValidateAndSetDefaults() error {
 	}
 	var buffer bytes.Buffer
 	return t.Execute(&buffer, ViewData{UI: cfg, Theme: "dark"})
+}
+
+func validatePeriods(periods []string, validationError error) error {
+	seenPeriods := make(map[string]struct{}, len(periods))
+	for _, period := range periods {
+		if period != "30d" && period != "7d" && period != "24h" && period != "1h" {
+			return validationError
+		}
+		if _, exists := seenPeriods[period]; exists {
+			return validationError
+		}
+		seenPeriods[period] = struct{}{}
+	}
+	return nil
 }
 
 type ViewData struct {

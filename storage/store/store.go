@@ -35,6 +35,9 @@ type Store interface {
 	// GetUptimeByKey returns the uptime percentage during a time range
 	GetUptimeByKey(key string, from, to time.Time) (float64, error)
 
+	// GetResponseTimeSuccessRateByKey returns the rt_success percentage during a time range.
+	GetResponseTimeSuccessRateByKey(key string, from, to time.Time) (float64, error)
+
 	// GetAverageResponseTimeByKey returns the average response time in milliseconds (value) during a time range
 	GetAverageResponseTimeByKey(key string, from, to time.Time) (int, error)
 

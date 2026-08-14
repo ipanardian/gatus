@@ -101,7 +101,7 @@
             </CardContent>
           </Card>
 
-          <div v-if="showResponseTimeChartAndBadges && (responseTimeTrendEnabled || responseTimeBadgePeriods.length > 0)" class="space-y-6">
+          <div v-if="showResponseTimeChartAndBadges && responseTimeTrendEnabled" class="space-y-6">
             <Card v-if="responseTimeTrendEnabled">
               <CardHeader>
                 <div class="flex items-center justify-between">
@@ -126,32 +126,37 @@
                 />
               </CardContent>
             </Card>
-
-            <div
-              v-if="responseTimeBadgePeriods.length > 0"
-              class="grid gap-4"
-              style="grid-template-columns: repeat(auto-fit, minmax(min(100%, 16rem), 1fr));"
-            >
-              <Card v-for="period in responseTimeBadgePeriods" :key="period">
-                <CardHeader class="pb-2">
-                  <CardTitle class="text-sm font-medium text-muted-foreground text-center">
-                    {{ responseTimePeriodLabels[period] }}
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <img :src="generateResponseTimeBadgeImageURL(period)" :alt="`${period} response time`" class="mx-auto mt-2" />
-                </CardContent>
-              </Card>
-            </div>
           </div>
 
-          <Card v-if="uptimeStatisticsEnabled">
+          <Card v-if="responseTimeStatisticsEnabled && responseTimeStatisticsPeriods.length > 0">
+            <CardHeader>
+              <CardTitle>Response Time Statistics</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div
+                class="grid gap-4"
+                style="grid-template-columns: repeat(auto-fit, minmax(min(100%, 16rem), 1fr));"
+              >
+                <div v-for="period in responseTimeStatisticsPeriods" :key="period" class="text-center">
+                  <p class="text-sm text-muted-foreground mb-2">
+                    {{ responseTimePeriodLabels[period] }}
+                  </p>
+                  <img :src="generateResponseTimeBadgeImageURL(period)" :alt="`${period} response time`" class="mx-auto" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card v-if="uptimeStatisticsEnabled && uptimeStatisticsPeriods.length > 0">
             <CardHeader>
               <CardTitle>Uptime Statistics</CardTitle>
             </CardHeader>
             <CardContent>
-              <div class="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-                <div v-for="period in ['30d', '7d', '24h', '1h']" :key="period" class="text-center">
+              <div
+                class="grid gap-4"
+                style="grid-template-columns: repeat(auto-fit, minmax(min(100%, 16rem), 1fr));"
+              >
+                <div v-for="period in uptimeStatisticsPeriods" :key="period" class="text-center">
                   <p class="text-sm text-muted-foreground mb-2">
                     {{ period === '30d' ? 'Last 30 days' : period === '7d' ? 'Last 7 days' : period === '24h' ? 'Last 24 hours' : 'Last hour' }}
                   </p>
@@ -236,10 +241,14 @@ const configuredSingleEndpoint = window.config?.singleEndpoint
 const singleEndpointMode = configuredSingleEndpoint && configuredSingleEndpoint !== '{{ .UI.SingleEndpoint }}'
 const isSectionEnabled = (value) => String(value).toLowerCase() !== 'false'
 const uptimeStatisticsEnabled = isSectionEnabled(window.config?.uptimeStatistics)
+const responseTimeStatisticsEnabled = isSectionEnabled(window.config?.responseTimeStatistics)
 const currentHealthEnabled = isSectionEnabled(window.config?.currentHealth)
 const responseTimeTrendEnabled = isSectionEnabled(window.config?.responseTimeTrend)
 const eventsEnabled = isSectionEnabled(window.config?.events)
-const responseTimeBadgePeriods = (window.config?.responseTimeBadgePeriods || '')
+const responseTimeStatisticsPeriods = (window.config?.responseTimeStatisticsPeriods || '')
+  .split(',')
+  .filter(Boolean)
+const uptimeStatisticsPeriods = (window.config?.uptimeStatisticsPeriods || '')
   .split(',')
   .filter(Boolean)
 const responseTimePeriodLabels = {
@@ -420,7 +429,7 @@ const generateUptimeBadgeImageURL = (duration) => {
 }
 
 const generateResponseTimeBadgeImageURL = (duration) => {
-  return `/api/v1/endpoints/${endpointStatus.value.key}/response-times/${duration}/badge.svg`
+	return `/api/v1/endpoints/${endpointStatus.value.key}/response-statistics/${duration}/badge.svg`
 }
 
 onMounted(() => {

@@ -209,8 +209,14 @@ func TestGetDefaultConfig(t *testing.T) {
 	if !defaultConfig.IsEventsEnabled() {
 		t.Error("expected events to be enabled by default")
 	}
-	if !slices.Equal(defaultConfig.ResponseTimeBadgePeriods, defaultResponseTimeBadgePeriods) {
-		t.Errorf("expected default response time badge periods %v, got %v", defaultResponseTimeBadgePeriods, defaultConfig.ResponseTimeBadgePeriods)
+	if !defaultConfig.IsResponseTimeStatisticsEnabled() {
+		t.Error("expected response time statistics to be enabled by default")
+	}
+	if !slices.Equal(defaultConfig.ResponseTimeStatisticsPeriods, defaultResponseTimeStatisticsPeriods) {
+		t.Errorf("expected default response time statistics periods %v, got %v", defaultResponseTimeStatisticsPeriods, defaultConfig.ResponseTimeStatisticsPeriods)
+	}
+	if !slices.Equal(defaultConfig.UptimeStatisticsPeriods, defaultUptimeStatisticsPeriods) {
+		t.Errorf("expected default uptime statistics periods %v, got %v", defaultUptimeStatisticsPeriods, defaultConfig.UptimeStatisticsPeriods)
 	}
 }
 
@@ -218,10 +224,12 @@ func TestConfig_EndpointDetailsSections(t *testing.T) {
 	cfg := &Config{}
 	if err := yaml.Unmarshal([]byte(`
 uptime-statistics: false
+response-time-statistics: false
 current-health: false
 response-time-trend: false
 events: false
-response-time-badge-periods: [30d, 7d]
+response-time-statistics-periods: [30d, 7d]
+uptime-statistics-periods: [30d]
 `), cfg); err != nil {
 		t.Fatal("expected valid UI configuration, got", err)
 	}
@@ -230,6 +238,9 @@ response-time-badge-periods: [30d, 7d]
 	}
 	if cfg.IsUptimeStatisticsEnabled() {
 		t.Error("expected uptime statistics to remain disabled")
+	}
+	if cfg.IsResponseTimeStatisticsEnabled() {
+		t.Error("expected response time statistics to remain disabled")
 	}
 	if cfg.IsCurrentHealthEnabled() {
 		t.Error("expected current health to remain disabled")
@@ -240,8 +251,11 @@ response-time-badge-periods: [30d, 7d]
 	if cfg.IsEventsEnabled() {
 		t.Error("expected events to remain disabled")
 	}
-	if !slices.Equal(cfg.ResponseTimeBadgePeriods, []string{"30d", "7d"}) {
-		t.Errorf("expected configured response time badge periods [30d 7d], got %v", cfg.ResponseTimeBadgePeriods)
+	if !slices.Equal(cfg.ResponseTimeStatisticsPeriods, []string{"30d", "7d"}) {
+		t.Errorf("expected configured response time statistics periods [30d 7d], got %v", cfg.ResponseTimeStatisticsPeriods)
+	}
+	if !slices.Equal(cfg.UptimeStatisticsPeriods, []string{"30d"}) {
+		t.Errorf("expected configured uptime statistics periods [30d], got %v", cfg.UptimeStatisticsPeriods)
 	}
 
 	defaultConfig := &Config{}
@@ -250,6 +264,9 @@ response-time-badge-periods: [30d, 7d]
 	}
 	if !defaultConfig.IsUptimeStatisticsEnabled() {
 		t.Error("expected unset uptime statistics to default to enabled")
+	}
+	if !defaultConfig.IsResponseTimeStatisticsEnabled() {
+		t.Error("expected unset response time statistics to default to enabled")
 	}
 	if !defaultConfig.IsCurrentHealthEnabled() {
 		t.Error("expected unset current health to default to enabled")
@@ -260,26 +277,48 @@ response-time-badge-periods: [30d, 7d]
 	if !defaultConfig.IsEventsEnabled() {
 		t.Error("expected unset events to default to enabled")
 	}
-	if !slices.Equal(defaultConfig.ResponseTimeBadgePeriods, defaultResponseTimeBadgePeriods) {
-		t.Errorf("expected unset response time badge periods to default to %v, got %v", defaultResponseTimeBadgePeriods, defaultConfig.ResponseTimeBadgePeriods)
+	if !slices.Equal(defaultConfig.ResponseTimeStatisticsPeriods, defaultResponseTimeStatisticsPeriods) {
+		t.Errorf("expected unset response time statistics periods to default to %v, got %v", defaultResponseTimeStatisticsPeriods, defaultConfig.ResponseTimeStatisticsPeriods)
+	}
+	if !slices.Equal(defaultConfig.UptimeStatisticsPeriods, defaultUptimeStatisticsPeriods) {
+		t.Errorf("expected unset uptime statistics periods to default to %v, got %v", defaultUptimeStatisticsPeriods, defaultConfig.UptimeStatisticsPeriods)
 	}
 }
 
-func TestConfig_ValidateAndSetDefaults_ResponseTimeBadgePeriods(t *testing.T) {
-	t.Run("empty-list-disables-all-badges", func(t *testing.T) {
-		cfg := &Config{ResponseTimeBadgePeriods: []string{}}
+func TestConfig_ValidateAndSetDefaults_UptimeStatisticsPeriods(t *testing.T) {
+	t.Run("empty-list-hides-all-statistics", func(t *testing.T) {
+		cfg := &Config{UptimeStatisticsPeriods: []string{}}
 		if err := cfg.ValidateAndSetDefaults(); err != nil {
 			t.Fatal("expected no error, got", err)
 		}
-		if cfg.ResponseTimeBadgePeriods == nil || len(cfg.ResponseTimeBadgePeriods) != 0 {
-			t.Errorf("expected an explicitly empty period list to remain empty, got %v", cfg.ResponseTimeBadgePeriods)
+		if cfg.UptimeStatisticsPeriods == nil || len(cfg.UptimeStatisticsPeriods) != 0 {
+			t.Errorf("expected an explicitly empty period list to remain empty, got %v", cfg.UptimeStatisticsPeriods)
 		}
 	})
 
 	t.Run("invalid-period", func(t *testing.T) {
-		cfg := &Config{ResponseTimeBadgePeriods: []string{"30d", "2d"}}
-		if err := cfg.ValidateAndSetDefaults(); !errors.Is(err, ErrInvalidResponseTimeBadgePeriod) {
-			t.Errorf("expected ErrInvalidResponseTimeBadgePeriod, got %v", err)
+		cfg := &Config{UptimeStatisticsPeriods: []string{"30d", "2d"}}
+		if err := cfg.ValidateAndSetDefaults(); !errors.Is(err, ErrInvalidUptimeStatisticsPeriod) {
+			t.Errorf("expected ErrInvalidUptimeStatisticsPeriod, got %v", err)
+		}
+	})
+}
+
+func TestConfig_ValidateAndSetDefaults_ResponseTimeStatisticsPeriods(t *testing.T) {
+	t.Run("empty-list-hides-all-statistics", func(t *testing.T) {
+		cfg := &Config{ResponseTimeStatisticsPeriods: []string{}}
+		if err := cfg.ValidateAndSetDefaults(); err != nil {
+			t.Fatal("expected no error, got", err)
+		}
+		if cfg.ResponseTimeStatisticsPeriods == nil || len(cfg.ResponseTimeStatisticsPeriods) != 0 {
+			t.Errorf("expected an explicitly empty period list to remain empty, got %v", cfg.ResponseTimeStatisticsPeriods)
+		}
+	})
+
+	t.Run("invalid-period", func(t *testing.T) {
+		cfg := &Config{ResponseTimeStatisticsPeriods: []string{"30d", "2d"}}
+		if err := cfg.ValidateAndSetDefaults(); !errors.Is(err, ErrInvalidResponseTimeStatisticsPeriod) {
+			t.Errorf("expected ErrInvalidResponseTimeStatisticsPeriod, got %v", err)
 		}
 	})
 }

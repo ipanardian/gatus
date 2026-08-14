@@ -91,6 +91,7 @@ func (s *Store) createPostgresSchema() error {
 			total_executions       BIGINT NOT NULL,
 			successful_executions  BIGINT NOT NULL,
 			total_response_time    BIGINT NOT NULL,
+			response_time_executions BIGINT NOT NULL DEFAULT 0,
 			UNIQUE(endpoint_id, hour_unix_timestamp)
 		)
 	`)
@@ -118,6 +119,9 @@ func (s *Store) createPostgresSchema() error {
 	_, _ = s.db.Exec(`ALTER TABLE endpoint_results ADD IF NOT EXISTS domain_expiration BIGINT NOT NULL DEFAULT 0`)
 	// Add suite_result_id to endpoint_results table for suite endpoint linkage
 	_, _ = s.db.Exec(`ALTER TABLE endpoint_results ADD COLUMN IF NOT EXISTS suite_result_id BIGINT REFERENCES suite_results(suite_result_id) ON DELETE CASCADE`)
+	if _, err := s.db.Exec(`ALTER TABLE endpoint_uptimes ADD COLUMN response_time_executions BIGINT NOT NULL DEFAULT 0`); err == nil {
+		_, _ = s.db.Exec(`UPDATE endpoint_uptimes SET response_time_executions = total_executions`)
+	}
 	// Create index for suite_result_id
 	_, _ = s.db.Exec(`CREATE INDEX IF NOT EXISTS endpoint_results_suite_result_id_idx ON endpoint_results(suite_result_id)`)
 	// Create index for endpoint_result_conditions

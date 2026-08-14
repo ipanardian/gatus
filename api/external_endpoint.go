@@ -23,6 +23,10 @@ func CreateExternalEndpointResult(cfg *config.Config) fiber.Handler {
 		if !exists || (success != "true" && success != "false") {
 			return c.Status(400).SendString("missing or invalid success query parameter")
 		}
+		rtSuccess, rtSuccessProvided := c.Queries()["rt_success"]
+		if rtSuccessProvided && rtSuccess != "true" && rtSuccess != "false" {
+			return c.Status(400).SendString("invalid rt_success query parameter")
+		}
 		// Check if the authorization bearer token header is correct
 		authorizationHeader := string(c.Request().Header.Peek("Authorization"))
 		if !strings.HasPrefix(authorizationHeader, "Bearer ") {
@@ -44,9 +48,10 @@ func CreateExternalEndpointResult(cfg *config.Config) fiber.Handler {
 		}
 		// Persist the result in the storage
 		result := &endpoint.Result{
-			Timestamp: time.Now(),
-			Success:   c.QueryBool("success"),
-			Errors:    []string{},
+			Timestamp:          time.Now(),
+			Success:            c.QueryBool("success"),
+			IgnoreResponseTime: rtSuccessProvided && !c.QueryBool("rt_success"),
+			Errors:             []string{},
 		}
 		if len(c.Query("duration")) > 0 {
 			parsedDuration, err := time.ParseDuration(c.Query("duration"))

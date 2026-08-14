@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	"github.com/TwiN/gatus/v5/alerting"
 	"github.com/TwiN/gatus/v5/alerting/alert"
@@ -95,6 +96,18 @@ func TestCreateExternalEndpointResult(t *testing.T) {
 			ExpectedCode:                   200,
 		},
 		{
+			Name:                           "response-time-statistic-excludes-rt-success-false",
+			Path:                           "/api/v1/endpoints/g_n/external?success=true&duration=20s&rt_success=false",
+			AuthorizationHeaderBearerToken: "Bearer token",
+			ExpectedCode:                   200,
+		},
+		{
+			Name:                           "bad-rt-success-value",
+			Path:                           "/api/v1/endpoints/g_n/external?success=true&duration=20s&rt_success=invalid",
+			AuthorizationHeaderBearerToken: "Bearer token",
+			ExpectedCode:                   400,
+		},
+		{
 			Name:                           "good-token-success-false",
 			Path:                           "/api/v1/endpoints/g_n/external?success=false",
 			AuthorizationHeaderBearerToken: "Bearer token",
@@ -138,8 +151,8 @@ func TestCreateExternalEndpointResult(t *testing.T) {
 		if endpointStatus.Key != "g_n" {
 			t.Errorf("expected key to be g_n but got %s", endpointStatus.Key)
 		}
-		if len(endpointStatus.Results) != 6 {
-			t.Errorf("expected 6 results but got %d", len(endpointStatus.Results))
+		if len(endpointStatus.Results) != 7 {
+			t.Errorf("expected 7 results but got %d", len(endpointStatus.Results))
 		}
 		if !endpointStatus.Results[0].Success {
 			t.Errorf("expected first result to be successful")
@@ -153,8 +166,8 @@ func TestCreateExternalEndpointResult(t *testing.T) {
 		if endpointStatus.Results[2].Duration == 0 || endpointStatus.Results[2].Duration.Seconds() != 10 {
 			t.Errorf("expected third result to have a duration of 10 seconds")
 		}
-		if endpointStatus.Results[3].Success {
-			t.Errorf("expected fourth result to be unsuccessful")
+		if !endpointStatus.Results[3].Success {
+			t.Errorf("expected fourth result to be successful")
 		}
 		if endpointStatus.Results[4].Success {
 			t.Errorf("expected fifth result to be unsuccessful")
@@ -162,8 +175,18 @@ func TestCreateExternalEndpointResult(t *testing.T) {
 		if endpointStatus.Results[5].Success {
 			t.Errorf("expected sixth result to be unsuccessful")
 		}
-		if len(endpointStatus.Results[5].Errors) == 0 || endpointStatus.Results[5].Errors[0] != "failed" {
-			t.Errorf("expected sixth result to have errors: failed")
+		if endpointStatus.Results[6].Success {
+			t.Errorf("expected seventh result to be unsuccessful")
+		}
+		if len(endpointStatus.Results[6].Errors) == 0 || endpointStatus.Results[6].Errors[0] != "failed" {
+			t.Errorf("expected seventh result to have errors: failed")
+		}
+		averageResponseTime, err := store.Get().GetAverageResponseTimeByKey("g_n", time.Now().Add(-time.Hour), time.Now())
+		if err != nil {
+			t.Errorf("failed to get average response time: %s", err.Error())
+		}
+		if averageResponseTime != 1666 {
+			t.Errorf("expected 1666ms response time average, got %dms", averageResponseTime)
 		}
 		externalEndpointFromConfig := cfg.GetExternalEndpointByKey("g_n")
 		if externalEndpointFromConfig.NumberOfFailuresInARow != 3 {

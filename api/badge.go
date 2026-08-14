@@ -73,6 +73,41 @@ func UptimeBadge(c *fiber.Ctx) error {
 	return c.Status(200).Send(generateUptimeBadgeSVG(duration, uptime))
 }
 
+func ResponseTimeStatisticsBadge(c *fiber.Ctx) error {
+	duration := c.Params("duration")
+	from, err := getBadgeStartTime(duration)
+	if err != nil {
+		return c.Status(400).SendString(err.Error())
+	}
+	key, err := url.QueryUnescape(c.Params("key"))
+	if err != nil {
+		return c.Status(400).SendString("invalid key encoding")
+	}
+	rate, err := store.Get().GetResponseTimeSuccessRateByKey(key, from, time.Now())
+	if err != nil {
+		if errors.Is(err, common.ErrEndpointNotFound) {
+			return c.Status(404).SendString(err.Error())
+		}
+		return c.Status(500).SendString(err.Error())
+	}
+	c.Set("Content-Type", "image/svg+xml")
+	return c.Status(200).Send(generatePercentageBadgeSVG("response time", duration, rate))
+}
+
+func getBadgeStartTime(duration string) (time.Time, error) {
+	switch duration {
+	case "30d":
+		return time.Now().Add(-30 * 24 * time.Hour), nil
+	case "7d":
+		return time.Now().Add(-7 * 24 * time.Hour), nil
+	case "24h":
+		return time.Now().Add(-24 * time.Hour), nil
+	case "1h":
+		return time.Now().Add(-time.Hour), nil
+	}
+	return time.Time{}, errors.New("Durations supported: 30d, 7d, 24h, 1h")
+}
+
 // ResponseTimeBadge handles the automatic generation of badge based on the group name and endpoint name passed.
 //
 // Valid values for :duration -> 30d, 7d, 24h, 1h
@@ -176,6 +211,10 @@ func HealthBadgeShields(c *fiber.Ctx) error {
 }
 
 func generateUptimeBadgeSVG(duration string, uptime float64) []byte {
+	return generatePercentageBadgeSVG("uptime", duration, uptime)
+}
+
+func generatePercentageBadgeSVG(label, duration string, uptime float64) []byte {
 	var labelWidth, valueWidth, valueWidthAdjustment int
 	switch duration {
 	case "30d":
@@ -187,6 +226,9 @@ func generateUptimeBadgeSVG(duration string, uptime float64) []byte {
 	case "1h":
 		labelWidth = 65
 	default:
+	}
+	if len(label) > len("uptime") {
+		labelWidth += (len(label) - len("uptime")) * 6
 	}
 	color := getBadgeColorFromUptime(uptime)
 	sanitizedValue := strings.TrimRight(strings.TrimRight(fmt.Sprintf("%.2f", uptime*100), "0"), ".") + "%"
@@ -212,10 +254,10 @@ func generateUptimeBadgeSVG(duration string, uptime float64) []byte {
   </g>
   <g fill="#fff" text-anchor="middle" font-family="DejaVu Sans,Verdana,Geneva,sans-serif" font-size="11">
     <text x="%d" y="15" fill="#010101" fill-opacity=".3">
-      uptime %s
+      %s %s
     </text>
     <text x="%d" y="14">
-      uptime %s
+      %s %s
     </text>
     <text x="%d" y="15" fill="#010101" fill-opacity=".3">
       %s
@@ -224,7 +266,7 @@ func generateUptimeBadgeSVG(duration string, uptime float64) []byte {
       %s
     </text>
   </g>
-</svg>`, width, width, labelWidth, color, labelWidth, valueWidth, labelWidth, width, labelX, duration, labelX, duration, valueX, sanitizedValue, valueX, sanitizedValue))
+</svg>`, width, width, labelWidth, color, labelWidth, valueWidth, labelWidth, width, labelX, label, duration, labelX, label, duration, valueX, sanitizedValue, valueX, sanitizedValue))
 	return svg
 }
 

@@ -465,6 +465,37 @@ func TestStore_SanityCheck(t *testing.T) {
 	}
 }
 
+func TestStore_ResponseTimeStatisticsExcludeIgnoredResults(t *testing.T) {
+	store, err := NewStore("sqlite", t.TempDir()+"/TestStore_ResponseTimeStatisticsExcludeIgnoredResults.db", false, storage.DefaultMaximumNumberOfResults, storage.DefaultMaximumNumberOfEvents)
+	if err != nil {
+		t.Fatal("expected no error, got", err)
+	}
+	defer store.Close()
+
+	includedResult := testSuccessfulResult
+	includedResult.Duration = 100 * time.Millisecond
+	includedResult.Timestamp = time.Now()
+	ignoredResult := testUnsuccessfulResult
+	ignoredResult.Duration = 900 * time.Millisecond
+	ignoredResult.Timestamp = includedResult.Timestamp
+	ignoredResult.IgnoreResponseTime = true
+
+	if err := store.InsertEndpointResult(&testEndpoint, &includedResult); err != nil {
+		t.Fatal("expected no error inserting included result, got", err)
+	}
+	if err := store.InsertEndpointResult(&testEndpoint, &ignoredResult); err != nil {
+		t.Fatal("expected no error inserting ignored result, got", err)
+	}
+
+	averageResponseTime, err := store.GetAverageResponseTimeByKey(testEndpoint.Key(), time.Now().Add(-time.Hour), time.Now())
+	if err != nil {
+		t.Fatal("expected no error getting response time, got", err)
+	}
+	if averageResponseTime != 100 {
+		t.Errorf("expected 100ms response time average, got %dms", averageResponseTime)
+	}
+}
+
 // TestStore_InvalidTransaction tests what happens if an invalid transaction is passed as parameter
 func TestStore_InvalidTransaction(t *testing.T) {
 	store, _ := NewStore("sqlite", t.TempDir()+"/TestStore_InvalidTransaction.db", false, storage.DefaultMaximumNumberOfResults, storage.DefaultMaximumNumberOfEvents)
