@@ -1872,6 +1872,36 @@ external-endpoints:
 	}
 }
 
+func TestParseAndValidateConfigBytesWithReportingPDF(t *testing.T) {
+	cfg, err := parseAndValidateConfigBytes([]byte(`
+reporting:
+  pdf:
+    enabled: true
+    super-admin:
+      username: super-admin
+      password-bcrypt-base64: JDJhJDA4JDFoRnpPY1hnaFl1OC9ISlFsa21VS09wOGlPU1ZOTDlHZG1qeTFvb3dIckRBUnlHUmNIRWlT
+    allowed-periods: [30d, 7d, 1d, 1h]
+    default-period: 7d
+    sla-target-percent: 99.9
+external-endpoints:
+  - name: worker
+    group: external
+    token: token
+`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if cfg.Reporting == nil || cfg.Reporting.PDF == nil {
+		t.Fatal("expected reporting PDF configuration")
+	}
+	if !cfg.Reporting.PDF.IsEnabled() || cfg.Reporting.PDF.DefaultPeriod != "7d" {
+		t.Fatalf("unexpected reporting PDF configuration: %#v", cfg.Reporting.PDF)
+	}
+	if cfg.Reporting.PDF.SuperAdmin == nil || cfg.Reporting.PDF.SuperAdmin.Username != "super-admin" {
+		t.Fatalf("unexpected reporting super-admin configuration: %#v", cfg.Reporting.PDF.SuperAdmin)
+	}
+}
+
 func TestParseAndValidateConfigBytesWithSingleEndpoint(t *testing.T) {
 	t.Parallel()
 	tests := []struct {

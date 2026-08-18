@@ -22,6 +22,7 @@ import (
 	"github.com/TwiN/gatus/v5/config/key"
 	"github.com/TwiN/gatus/v5/config/maintenance"
 	"github.com/TwiN/gatus/v5/config/remote"
+	"github.com/TwiN/gatus/v5/config/reporting"
 	"github.com/TwiN/gatus/v5/config/suite"
 	"github.com/TwiN/gatus/v5/config/tunneling"
 	"github.com/TwiN/gatus/v5/config/ui"
@@ -109,6 +110,9 @@ type Config struct {
 
 	// UI is the configuration for the UI
 	UI *ui.Config `yaml:"ui,omitempty"`
+
+	// Reporting is the configuration for optional downloadable reports.
+	Reporting *reporting.Config `yaml:"reporting,omitempty"`
 
 	// Maintenance is the configuration for creating a maintenance window in which no alerts are sent
 	Maintenance *maintenance.Config `yaml:"maintenance,omitempty"`
@@ -326,6 +330,9 @@ func parseAndValidateConfigBytes(yamlBytes []byte) (config *Config, err error) {
 		if err := ValidateStorageConfig(config); err != nil {
 			return nil, err
 		}
+		if err := ValidateReportingConfig(config); err != nil {
+			return nil, err
+		}
 		if err := ValidateRemoteConfig(config); err != nil {
 			return nil, err
 		}
@@ -444,6 +451,13 @@ func ValidateStorageConfig(config *Config) error {
 		}
 	}
 	return nil
+}
+
+func ValidateReportingConfig(config *Config) error {
+	if config.Reporting == nil {
+		return nil
+	}
+	return config.Reporting.ValidateAndSetDefaults()
 }
 
 func ValidateMaintenanceConfig(config *Config) error {

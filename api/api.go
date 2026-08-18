@@ -8,6 +8,7 @@ import (
 	"github.com/TwiN/gatus/v5/config"
 	"github.com/TwiN/gatus/v5/config/ui"
 	"github.com/TwiN/gatus/v5/config/web"
+	"github.com/TwiN/gatus/v5/security"
 	static "github.com/TwiN/gatus/v5/web"
 	"github.com/TwiN/health"
 	"github.com/TwiN/logr"
@@ -101,22 +102,19 @@ func (a *API) createRouter(cfg *config.Config) *fiber.App {
 	})
 	// Custom CSS
 	app.Get("/css/custom.css", CustomCSSHandler{customCSS: cfg.UI.CustomCSS}.GetCustomCSS)
-	// Everything else falls back on static content
-	app.Use(redirect.New(redirect.Config{
-		Rules: map[string]string{
-			"/index.html": "/",
-		},
-		StatusCode: 301,
-	}))
-	staticFileSystem, err := fs.Sub(static.FileSystem, static.RootPath)
-	if err != nil {
-		panic(err)
+	// SLA reports use dedicated super-admin credentials, independent of global security.
+	reportRouter := apiRouter.Group("/")
+	if cfg.Reporting == nil || cfg.Reporting.PDF == nil || cfg.Reporting.PDF.SuperAdmin == nil {
+		reportRouter.Get("/v1/reports/sla.pdf", func(c *fiber.Ctx) error {
+			return c.SendStatus(http.StatusForbidden)
+		})
+	} else {
+		reportAuth, err := security.BasicAuthMiddleware(cfg.Reporting.PDF.SuperAdmin, "SLA Reports")
+		if err != nil {
+			panic(err)
+		}
+		reportRouter.Get("/v1/reports/sla.pdf", reportAuth, SLAReport(cfg))
 	}
-	app.Use("/", fiberfs.New(fiberfs.Config{
-		Root:   http.FS(staticFileSystem),
-		Index:  "index.html",
-		Browse: true,
-	}))
 	//////////////////////
 	// PROTECTED ROUTES //
 	//////////////////////
@@ -134,5 +132,21 @@ func (a *API) createRouter(cfg *config.Config) *fiber.App {
 	protectedAPIRouter.Get("/v1/endpoints/:key/statuses", singleEndpointRestriction, EndpointStatus(cfg))
 	protectedAPIRouter.Get("/v1/suites/statuses", SuiteStatuses(cfg))
 	protectedAPIRouter.Get("/v1/suites/:key/statuses", SuiteStatus(cfg))
+	// Everything else falls back on static content after every API route is registered.
+	app.Use(redirect.New(redirect.Config{
+		Rules: map[string]string{
+			"/index.html": "/",
+		},
+		StatusCode: 301,
+	}))
+	staticFileSystem, err := fs.Sub(static.FileSystem, static.RootPath)
+	if err != nil {
+		panic(err)
+	}
+	app.Use("/", fiberfs.New(fiberfs.Config{
+		Root:   http.FS(staticFileSystem),
+		Index:  "index.html",
+		Browse: true,
+	}))
 	return app
 }
