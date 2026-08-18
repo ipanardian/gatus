@@ -40,6 +40,9 @@ type ExternalEndpoint struct {
 	// CustomKey overrides the generated group/name key used in URLs and storage.
 	CustomKey string `yaml:"key,omitempty"`
 
+	// URL is the optional target address or WebSocket URL (e.g. ws://ws.price.usenobi.com/v1) for reference and reporting.
+	URL string `yaml:"url,omitempty"`
+
 	// Token is the bearer token that must be provided through the Authorization header to push results to the endpoint
 	Token string `yaml:"token,omitempty"`
 
@@ -107,6 +110,7 @@ func (externalEndpoint *ExternalEndpoint) ToEndpoint() *Endpoint {
 		Enabled:                 externalEndpoint.Enabled,
 		Name:                    externalEndpoint.Name,
 		Group:                   externalEndpoint.Group,
+		URL:                     externalEndpoint.URL,
 		KeyOverride:             externalEndpoint.CustomKey,
 		Alerts:                  externalEndpoint.Alerts,
 		NumberOfFailuresInARow:  externalEndpoint.NumberOfFailuresInARow,
